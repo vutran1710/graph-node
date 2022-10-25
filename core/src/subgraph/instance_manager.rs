@@ -21,6 +21,7 @@ use super::SubgraphTriggerProcessor;
 pub struct SubgraphInstanceManager<S: SubgraphStore> {
     logger_factory: LoggerFactory,
     subgraph_store: Arc<S>,
+    event_store: Option<Arc<dyn EventStore>>,
     chains: Arc<BlockchainMap>,
     metrics_registry: Arc<dyn MetricsRegistry>,
     manager_metrics: SubgraphInstanceManagerMetrics,
@@ -135,6 +136,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
     pub fn new(
         logger_factory: &LoggerFactory,
         subgraph_store: Arc<S>,
+        event_store: Option<Arc<dyn EventStore>>,
         chains: Arc<BlockchainMap>,
         metrics_registry: Arc<dyn MetricsRegistry>,
         link_resolver: Arc<dyn LinkResolver>,
@@ -148,6 +150,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
             logger_factory,
             subgraph_store,
             chains,
+            event_store,
             manager_metrics: SubgraphInstanceManagerMetrics::new(metrics_registry.cheap_clone()),
             metrics_registry,
             instances: SharedInstanceKeepAliveMap::default(),
@@ -360,6 +363,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
 
         let inputs = IndexingInputs {
             deployment: deployment.clone(),
+            event_store: self.event_store.cheap_clone(),
             features,
             start_blocks,
             stop_block,
