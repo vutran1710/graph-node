@@ -43,13 +43,6 @@ services:
       PGDATA: "/data/postgres"
     # volumes:
     #   - ./data/postgres:/var/lib/postgresql/data
-  zookeeper:
-    image: 'bitnami/zookeeper:latest'
-    ports:
-      - 2181:2181
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-
   rabbitmq:
     image: 'rabbitmq:management-alpine'
     ports:
