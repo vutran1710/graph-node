@@ -416,6 +416,7 @@ async fn main() {
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
             network_store.subgraph_store(),
+            None,
             blockchain_map.cheap_clone(),
             metrics_registry.clone(),
             link_resolver.clone(),

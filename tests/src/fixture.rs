@@ -254,6 +254,7 @@ pub async fn setup<C: Blockchain>(
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         subgraph_store.clone(),
+        None,
         blockchain_map.clone(),
         mock_registry.clone(),
         link_resolver.cheap_clone(),
