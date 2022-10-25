@@ -522,3 +522,16 @@ pub trait StatusStore: Send + Sync + 'static {
         block_number: BlockNumber,
     ) -> Result<Option<(PartialBlockPtr, [u8; 32])>, StoreError>;
 }
+
+#[async_trait]
+pub trait EventStore: Send + Sync + 'static {
+    async fn start_subgraph_deployment(&self, logger: &Logger) -> Result<(), StoreError>;
+    async fn publish_data(
+        &self,
+        block_ptr_to: BlockPtr,
+        mods: Vec<EntityModification>,
+        data_sources: Vec<StoredDynamicDataSource>,
+        manifest_idx_and_name: Vec<(u32, String)>,
+        offchain_to_remove: Vec<StoredDynamicDataSource>,
+    ) -> Result<(), StoreError>;
+}
