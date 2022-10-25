@@ -392,6 +392,10 @@ where
             .await
             .context("Failed to transact block operations")?;
 
+        if let Some(event_store) = &self.inputs.event_store {
+            info!(self.logger, "Publishing to store";);
+        }
+
         // For subgraphs with `nonFatalErrors` feature disabled, we consider
         // any error as fatal.
         //
