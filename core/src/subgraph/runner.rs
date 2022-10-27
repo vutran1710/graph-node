@@ -377,6 +377,8 @@ where
         } = block_state;
 
         let first_error = deterministic_errors.first().cloned();
+        let cloned_block_ptr = block_ptr.clone();
+        let cloned_mods = mods.clone();
 
         store
             .transact_block_operations(
@@ -394,6 +396,13 @@ where
 
         if let Some(event_store) = &self.inputs.event_store {
             info!(self.logger, "Publishing to store";);
+            let _ = event_store
+                .publish_data(
+                    cloned_block_ptr,
+                    cloned_mods,
+                    self.inputs.manifest_idx_and_name.clone(),
+                )
+                .await;
         }
 
         // For subgraphs with `nonFatalErrors` feature disabled, we consider

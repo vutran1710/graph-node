@@ -363,7 +363,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
 
         let inputs = IndexingInputs {
             deployment: deployment.clone(),
-            event_store: self.event_store.cheap_clone(),
+            event_store: self.event_store.clone(),
             features,
             start_blocks,
             stop_block,

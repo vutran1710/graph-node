@@ -38,11 +38,13 @@ use graph_server_json_rpc::JsonRpcServer;
 use graph_server_metrics::PrometheusMetricsServer;
 use graph_server_websocket::SubscriptionServer as GraphQLSubscriptionServer;
 use graph_store_postgres::{register_jobs as register_store_jobs, ChainHeadUpdateListener, Store};
+use graph_store_rabbitmq::RabbitEventStore;
 use near::NearStreamBuilder;
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::atomic;
+use std::sync::mpsc::sync_channel;
 use std::time::Duration;
 use std::{collections::HashMap, env};
 use tokio::sync::mpsc;
@@ -413,10 +415,12 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
+        let event_store = RabbitEventStore::new(logger.clone());
+
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
             network_store.subgraph_store(),
-            None,
+            Some(Arc::new(event_store)),
             blockchain_map.cheap_clone(),
             metrics_registry.clone(),
             link_resolver.clone(),
