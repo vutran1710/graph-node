@@ -524,8 +524,8 @@ pub trait StatusStore: Send + Sync + 'static {
 }
 
 #[async_trait]
-pub trait EventStore: Send + Sync + 'static {
-    async fn start_subgraph_deployment(&self, logger: &Logger) -> Result<(), StoreError>;
+pub trait EventStore: Clone + Send + Sync + 'static {
+    async fn start_subgraph_deployment(&mut self, manifest: &Vec<(u32, String)>) -> ();
     async fn publish_data(
         &self,
         block_ptr_to: BlockPtr,
