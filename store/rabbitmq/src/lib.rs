@@ -30,21 +30,30 @@ impl EventStore for RabbitEventStore {
     async fn publish_data(
         &self,
         _block_ptr_to: BlockPtr,
-        _mods: Vec<EntityModification>,
-        _manifest_idx_and_name: Vec<(u32, String)>,
+        mods: Vec<EntityModification>,
+        manifest_idx_and_name: Vec<(u32, String)>,
     ) -> () {
         let mut connection = self.connection.lock().unwrap();
         let channel = connection.open_channel(None).unwrap();
         let mut exchange_opts = ExchangeDeclareOptions::default();
         exchange_opts.durable = true;
 
-        let exchange = channel
-            .exchange_declare(ExchangeType::Direct, "graph-node", exchange_opts)
-            .unwrap();
+        let data = format!("{:?}", mods);
+        let data_as_bytes = data.as_bytes();
+        let routing_key = "mods";
 
-        let result = exchange
-            .publish(Publish::new("hello there".as_bytes(), "hello"))
-            .unwrap();
-        warn!(self.logger, "Done publishing..."; "result" => format!("{:?}", result));
+        for (_, subgraph_id) in manifest_idx_and_name {
+            let exchange = channel
+                .exchange_declare(
+                    ExchangeType::Fanout,
+                    format!("{:?}", subgraph_id),
+                    exchange_opts.clone(),
+                )
+                .unwrap();
+
+            let _result = exchange.publish(Publish::new(data_as_bytes.clone(), routing_key));
+        }
+
+        warn!(self.logger, "Done publishing...";);
     }
 }
