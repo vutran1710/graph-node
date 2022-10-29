@@ -13,8 +13,8 @@ members = [
     "server/index-node",
     "server/metrics",
     "store/postgres",
-    "store/rabbitmq",
     "store/test-store",
+    "bus/rabbitmq",
     "graph",
     "tests",
 ]
