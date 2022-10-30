@@ -3,6 +3,7 @@ use std::fmt::Display;
 
 #[derive(Error, Debug)]
 pub enum BusError {
+    InitializationError,
     SendMappingError(String),
     SendModificationError(String),
 }
@@ -15,6 +16,9 @@ impl Display for BusError {
             }
             BusError::SendModificationError(err) => {
                 write!(f, "BusError: sending modifications failed => {}", err)
+            }
+            BusError::InitializationError => {
+                write!(f, "BusError: initialization failed")
             }
         }
     }
