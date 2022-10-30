@@ -2087,6 +2087,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "atomic_refcell",
+ "bus-rabbitmq",
  "bytes",
  "cid",
  "futures 0.1.31",
