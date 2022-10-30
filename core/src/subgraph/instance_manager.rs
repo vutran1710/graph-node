@@ -1,8 +1,11 @@
+use super::context::OffchainMonitor;
+use super::SubgraphTriggerProcessor;
 use crate::polling_monitor::ipfs_service::IpfsService;
 use crate::subgraph::context::{IndexingContext, SharedInstanceKeepAliveMap};
 use crate::subgraph::inputs::IndexingInputs;
 use crate::subgraph::loader::load_dynamic_data_sources;
 use crate::subgraph::runner::SubgraphRunner;
+use bus_rabbitmq::RabbitmqBus;
 use graph::blockchain::block_stream::BlockStreamMetrics;
 use graph::blockchain::Blockchain;
 use graph::blockchain::NodeCapabilities;
@@ -15,13 +18,10 @@ use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
 use tokio::task;
 
-use super::context::OffchainMonitor;
-use super::SubgraphTriggerProcessor;
-
 pub struct SubgraphInstanceManager<S: SubgraphStore> {
     logger_factory: LoggerFactory,
     subgraph_store: Arc<S>,
-    event_store: Option<Arc<dyn EventStore>>,
+    bus: Option<Arc<RabbitmqBus>>,
     chains: Arc<BlockchainMap>,
     metrics_registry: Arc<dyn MetricsRegistry>,
     manager_metrics: SubgraphInstanceManagerMetrics,
@@ -136,7 +136,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
     pub fn new(
         logger_factory: &LoggerFactory,
         subgraph_store: Arc<S>,
-        event_store: Option<Arc<dyn EventStore>>,
+        bus: Option<Arc<RabbitmqBus>>,
         chains: Arc<BlockchainMap>,
         metrics_registry: Arc<dyn MetricsRegistry>,
         link_resolver: Arc<dyn LinkResolver>,
@@ -150,7 +150,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
             logger_factory,
             subgraph_store,
             chains,
-            event_store,
+            bus,
             manager_metrics: SubgraphInstanceManagerMetrics::new(metrics_registry.cheap_clone()),
             metrics_registry,
             instances: SharedInstanceKeepAliveMap::default(),
@@ -363,7 +363,6 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
 
         let inputs = IndexingInputs {
             deployment: deployment.clone(),
-            event_store: self.event_store.clone(),
             features,
             start_blocks,
             stop_block,
@@ -374,9 +373,10 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
             templates,
             unified_api_version,
             static_filters,
-            manifest_idx_and_name,
             poi_version,
             network,
+            manifest_idx_and_name,
+            bus: self.bus.clone(),
         };
 
         // The subgraph state tracks the state of the subgraph instance over time

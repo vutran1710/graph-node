@@ -8,6 +8,7 @@ use graph::blockchain::block_stream::{BlockStreamEvent, BlockWithTriggers, Fireh
 use graph::blockchain::{Block, Blockchain, TriggerFilter as _};
 use graph::components::store::{EmptyStore, EntityKey, StoredDynamicDataSource};
 use graph::components::{
+    bus::*,
     store::ModificationsAndCache,
     subgraph::{CausalityRegion, MappingError, ProofOfIndexing, SharedProofOfIndexing},
 };
@@ -394,15 +395,15 @@ where
             .await
             .context("Failed to transact block operations")?;
 
-        if let Some(event_store) = &self.inputs.event_store {
-            info!(self.logger, "Publishing to store";);
-            let _ = event_store
-                .publish_data(
-                    cloned_block_ptr,
-                    cloned_mods,
-                    self.inputs.manifest_idx_and_name.clone(),
-                )
-                .await;
+        if let Some(bus) = &self.inputs.bus {
+            info!(self.logger, "Sending modifications via Bus"; "bus" => bus.name.clone());
+            bus.send_modification_data(
+                cloned_block_ptr,
+                cloned_mods,
+                self.inputs.manifest_idx_and_name.clone(),
+            )
+            .await
+            .context("Failed to send bus message")?;
         }
 
         // For subgraphs with `nonFatalErrors` feature disabled, we consider

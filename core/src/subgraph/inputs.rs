@@ -1,7 +1,8 @@
+use bus_rabbitmq::RabbitmqBus;
 use graph::{
     blockchain::{Blockchain, TriggersAdapter},
     components::{
-        store::{DeploymentLocator, EventStore, SubgraphFork, WritableStore},
+        store::{DeploymentLocator, SubgraphFork, WritableStore},
         subgraph::ProofOfIndexingVersion,
     },
     data::subgraph::{SubgraphFeature, UnifiedMappingApiVersion},
@@ -17,7 +18,7 @@ pub struct IndexingInputs<C: Blockchain> {
     pub start_blocks: Vec<BlockNumber>,
     pub stop_block: Option<BlockNumber>,
     pub store: Arc<dyn WritableStore>,
-    pub event_store: Option<Arc<dyn EventStore>>,
+    pub bus: Option<Arc<RabbitmqBus>>,
     pub debug_fork: Option<Arc<dyn SubgraphFork>>,
     pub triggers_adapter: Arc<dyn TriggersAdapter<C>>,
     pub chain: Arc<C>,

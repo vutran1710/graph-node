@@ -1,3 +1,4 @@
+use bus_rabbitmq::RabbitmqBus;
 use clap::Parser as _;
 use ethereum::chain::{EthereumAdapterSelector, EthereumStreamBuilder};
 use ethereum::{
@@ -6,6 +7,7 @@ use ethereum::{
 use git_testament::{git_testament, render_testament};
 use graph::blockchain::firehose_block_ingestor::FirehoseBlockIngestor;
 use graph::blockchain::{Block as BlockchainBlock, Blockchain, BlockchainKind, BlockchainMap};
+use graph::components::bus::*;
 use graph::components::store::BlockStore;
 use graph::data::graphql::effort::LoadManager;
 use graph::env::EnvVars;
@@ -38,13 +40,11 @@ use graph_server_json_rpc::JsonRpcServer;
 use graph_server_metrics::PrometheusMetricsServer;
 use graph_server_websocket::SubscriptionServer as GraphQLSubscriptionServer;
 use graph_store_postgres::{register_jobs as register_store_jobs, ChainHeadUpdateListener, Store};
-use graph_store_rabbitmq::RabbitEventStore;
 use near::NearStreamBuilder;
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::atomic;
-use std::sync::mpsc::sync_channel;
 use std::time::Duration;
 use std::{collections::HashMap, env};
 use tokio::sync::mpsc;
@@ -415,12 +415,15 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
-        let event_store = RabbitEventStore::new(logger.clone());
+        let bus = RabbitmqBus::new(
+            String::from("amqp://guest:guest@localhost:5672"),
+            logger.clone(),
+        );
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
             network_store.subgraph_store(),
-            Some(Arc::new(event_store)),
+            Some(Arc::new(bus)),
             blockchain_map.cheap_clone(),
             metrics_registry.clone(),
             link_resolver.clone(),
