@@ -8,7 +8,6 @@ use graph::blockchain::block_stream::{BlockStreamEvent, BlockWithTriggers, Fireh
 use graph::blockchain::{Block, Blockchain, TriggerFilter as _};
 use graph::components::store::{EmptyStore, EntityKey, StoredDynamicDataSource};
 use graph::components::{
-    bus::Bus,
     store::ModificationsAndCache,
     subgraph::{CausalityRegion, MappingError, ProofOfIndexing, SharedProofOfIndexing},
 };
@@ -28,27 +27,25 @@ const MINUTE: Duration = Duration::from_secs(60);
 
 const SKIP_PTR_UPDATES_THRESHOLD: Duration = Duration::from_secs(60 * 5);
 
-pub(crate) struct SubgraphRunner<C, T, B>
+pub(crate) struct SubgraphRunner<C, T>
 where
     C: Blockchain,
     T: RuntimeHostBuilder<C>,
-    B: Bus,
 {
     ctx: IndexingContext<C, T>,
     state: IndexingState,
-    inputs: Arc<IndexingInputs<C, B>>,
+    inputs: Arc<IndexingInputs<C>>,
     logger: Logger,
     metrics: RunnerMetrics,
 }
 
-impl<C, T, B> SubgraphRunner<C, T, B>
+impl<C, T> SubgraphRunner<C, T>
 where
     C: Blockchain,
     T: RuntimeHostBuilder<C>,
-    B: Bus,
 {
     pub fn new(
-        inputs: IndexingInputs<C, B>,
+        inputs: IndexingInputs<C>,
         ctx: IndexingContext<C, T>,
         logger: Logger,
         metrics: RunnerMetrics,
@@ -539,11 +536,10 @@ where
     }
 }
 
-impl<C, T, B> SubgraphRunner<C, T, B>
+impl<C, T> SubgraphRunner<C, T>
 where
     C: Blockchain,
     T: RuntimeHostBuilder<C>,
-    B: Bus,
 {
     async fn handle_stream_event(
         &mut self,
@@ -651,11 +647,10 @@ trait StreamEventHandler<C: Blockchain> {
 }
 
 #[async_trait]
-impl<C, T, B> StreamEventHandler<C> for SubgraphRunner<C, T, B>
+impl<C, T> StreamEventHandler<C> for SubgraphRunner<C, T>
 where
     C: Blockchain,
     T: RuntimeHostBuilder<C>,
-    B: Bus,
 {
     async fn handle_process_block(
         &mut self,

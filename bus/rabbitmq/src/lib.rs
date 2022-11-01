@@ -30,6 +30,7 @@ impl Bus for RabbitmqBus {
     }
 
     fn send_plain_text(&self, text: String, subgraph_id: DeploymentHash) -> Result<(), BusError> {
+        // NOTE: this is very UGLY, but we are doing POC, so its ok for now
         let data_as_bytes = text.as_bytes();
         let routing_key = subgraph_id.as_str();
         let mut exchange_opts = ExchangeDeclareOptions::default();

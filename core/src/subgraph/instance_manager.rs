@@ -379,7 +379,6 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             poi_version,
             network,
             manifest_idx_and_name,
-            bus: self.bus.clone(),
         };
 
         // The subgraph state tracks the state of the subgraph instance over time

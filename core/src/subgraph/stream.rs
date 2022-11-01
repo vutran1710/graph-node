@@ -1,15 +1,14 @@
 use crate::subgraph::inputs::IndexingInputs;
 use graph::blockchain::block_stream::{BlockStream, BufferedBlockStream};
 use graph::blockchain::Blockchain;
-use graph::components::bus::Bus;
 use graph::prelude::Error;
 use std::sync::Arc;
 
 const BUFFERED_BLOCK_STREAM_SIZE: usize = 100;
 const BUFFERED_FIREHOSE_STREAM_SIZE: usize = 1;
 
-pub async fn new_block_stream<C: Blockchain, B: Bus>(
-    inputs: &IndexingInputs<C, B>,
+pub async fn new_block_stream<C: Blockchain>(
+    inputs: &IndexingInputs<C>,
     filter: &C::TriggerFilter,
 ) -> Result<Box<dyn BlockStream<C>>, Error> {
     let is_firehose = inputs.chain.is_firehose_supported();
