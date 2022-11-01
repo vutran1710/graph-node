@@ -8,6 +8,7 @@ use std::time::Duration;
 use crate::helpers::run_cmd;
 use anyhow::Error;
 use async_stream::stream;
+use bus_rabbitmq::RabbitmqBus;
 use futures::{Stream, StreamExt};
 use graph::blockchain::block_stream::{
     BlockStream, BlockStreamBuilder, BlockStreamEvent, BlockWithTriggers, FirehoseCursor,
@@ -17,6 +18,7 @@ use graph::blockchain::{
     TriggersAdapter, TriggersAdapterSelector,
 };
 use graph::cheap_clone::CheapClone;
+use graph::components::bus::Bus;
 use graph::components::store::{BlockStore, DeploymentLocator};
 use graph::data::graphql::effort::LoadManager;
 use graph::data::query::{Query, QueryTarget};
@@ -103,7 +105,7 @@ pub struct TestContext {
     pub logger: Logger,
     pub provider: Arc<
         IpfsSubgraphAssignmentProvider<
-            SubgraphInstanceManager<graph_store_postgres::SubgraphStore>,
+            SubgraphInstanceManager<graph_store_postgres::SubgraphStore, RabbitmqBus>,
         >,
     >,
     pub store: Arc<SubgraphStore>,
@@ -251,10 +253,14 @@ pub async fn setup<C: Blockchain>(
     );
 
     let blockchain_map = Arc::new(blockchain_map);
+    let bus = RabbitmqBus::new(
+        String::from("amqp://guest:guest@localhost:5672"),
+        logger.clone(),
+    );
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         subgraph_store.clone(),
-        None,
+        Arc::new(bus),
         blockchain_map.clone(),
         mock_registry.clone(),
         link_resolver.cheap_clone(),

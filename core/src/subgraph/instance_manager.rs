@@ -5,11 +5,11 @@ use crate::subgraph::context::{IndexingContext, SharedInstanceKeepAliveMap};
 use crate::subgraph::inputs::IndexingInputs;
 use crate::subgraph::loader::load_dynamic_data_sources;
 use crate::subgraph::runner::SubgraphRunner;
-use bus_rabbitmq::RabbitmqBus;
 use graph::blockchain::block_stream::BlockStreamMetrics;
 use graph::blockchain::Blockchain;
 use graph::blockchain::NodeCapabilities;
 use graph::blockchain::{BlockchainKind, TriggerFilter};
+use graph::components::bus::Bus;
 use graph::components::subgraph::ProofOfIndexingVersion;
 use graph::data::subgraph::{UnresolvedSubgraphManifest, SPEC_VERSION_0_0_6};
 use graph::prelude::{SubgraphInstanceManager as SubgraphInstanceManagerTrait, *};
@@ -18,10 +18,10 @@ use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
 use tokio::task;
 
-pub struct SubgraphInstanceManager<S: SubgraphStore> {
+pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
     logger_factory: LoggerFactory,
     subgraph_store: Arc<S>,
-    bus: Option<Arc<RabbitmqBus>>,
+    bus: Arc<B>,
     chains: Arc<BlockchainMap>,
     metrics_registry: Arc<dyn MetricsRegistry>,
     manager_metrics: SubgraphInstanceManagerMetrics,
@@ -32,7 +32,7 @@ pub struct SubgraphInstanceManager<S: SubgraphStore> {
 }
 
 #[async_trait]
-impl<S: SubgraphStore> SubgraphInstanceManagerTrait for SubgraphInstanceManager<S> {
+impl<S: SubgraphStore, B: Bus> SubgraphInstanceManagerTrait for SubgraphInstanceManager<S, B> {
     async fn start_subgraph(
         self: Arc<Self>,
         loc: DeploymentLocator,
@@ -132,11 +132,11 @@ impl<S: SubgraphStore> SubgraphInstanceManagerTrait for SubgraphInstanceManager<
     }
 }
 
-impl<S: SubgraphStore> SubgraphInstanceManager<S> {
+impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
     pub fn new(
         logger_factory: &LoggerFactory,
         subgraph_store: Arc<S>,
-        bus: Option<Arc<RabbitmqBus>>,
+        bus: Arc<B>,
         chains: Arc<BlockchainMap>,
         metrics_registry: Arc<dyn MetricsRegistry>,
         link_resolver: Arc<dyn LinkResolver>,

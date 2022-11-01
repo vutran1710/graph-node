@@ -26,6 +26,9 @@ impl Bus for RabbitmqBus {
             logger,
         }
     }
+    fn get_name(&self) -> &str {
+        self.name.as_str()
+    }
     async fn send_trigger_data(&self) -> Result<(), BusError> {
         Ok(())
     }

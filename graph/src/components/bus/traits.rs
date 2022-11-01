@@ -7,6 +7,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait Bus: Send + Sync + 'static {
     fn new(connection_uri: String, logger: Logger) -> Self;
+    fn get_name(&self) -> &str;
     async fn send_trigger_data(&self) -> Result<(), BusError>;
     async fn send_modification_data(
         &self,
