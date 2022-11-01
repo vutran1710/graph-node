@@ -59,7 +59,7 @@ impl Bus for RabbitmqBus {
             let _result = exchange.publish(Publish::new(data_as_bytes.clone(), routing_key));
         }
 
-        warn!(self.logger, "Done publishing...";);
+        // warn!(self.logger, "Done publishing...";);
         Ok(())
     }
 }
