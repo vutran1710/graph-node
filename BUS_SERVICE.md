@@ -10,6 +10,7 @@ Main Tasks
 
 
 TODO
+- [ ] Fix test
 - [ ] Update config to pass bus uri from env
 - [ ] Routing/Categorizing analysis
 - [ ] Define Bus Types/Config that our graphnode supports in a separate Rust package
