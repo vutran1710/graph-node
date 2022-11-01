@@ -16,6 +16,7 @@ use graph::prelude::{SubgraphInstanceManager as SubgraphInstanceManagerTrait, *}
 use graph::{blockchain::BlockchainMap, components::store::DeploymentLocator};
 use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
+use std::sync::mpsc::sync_channel;
 use tokio::task;
 
 pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
@@ -339,10 +340,12 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         let deployment_head = store.block_ptr().map(|ptr| ptr.number).unwrap_or(0) as f64;
         block_stream_metrics.deployment_head.set(deployment_head);
 
+        let (sender, receiver) = sync_channel(10);
         let host_builder = graph_runtime_wasm::RuntimeHostBuilder::new(
             chain.runtime_adapter(),
             self.link_resolver.cheap_clone(),
             subgraph_store.ens_lookup(),
+            sender.clone(),
         );
 
         let features = manifest.features.clone();
@@ -417,6 +420,12 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
                 );
             }
             subgraph_metrics_unregister.unregister(registry);
+        });
+
+        graph::spawn_thread("bus-work", move || {
+            while let Ok(data) = receiver.recv() {
+                let _bus_send = self.bus.send_plain_text(data, deployment.hash.clone());
+            }
         });
 
         Ok(())

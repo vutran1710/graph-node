@@ -3,11 +3,6 @@ use std::ops::Deref;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-use never::Never;
-use semver::Version;
-use wasmtime::Trap;
-use web3::types::H160;
-
 use graph::blockchain::Blockchain;
 use graph::components::store::EnsLookup;
 use graph::components::store::{EntityKey, EntityType};
@@ -21,6 +16,11 @@ use graph::prelude::serde_json;
 use graph::prelude::{slog::b, slog::record_static, *};
 use graph::runtime::gas::{self, complexity, Gas, GasCounter};
 pub use graph::runtime::{DeterministicHostError, HostExportError};
+use never::Never;
+use semver::Version;
+use std::sync::mpsc::SyncSender as Sender;
+use wasmtime::Trap;
+use web3::types::H160;
 
 use crate::module::{WasmInstance, WasmInstanceContext};
 use crate::{error::DeterminismLevel, module::IntoTrap};
@@ -69,6 +69,7 @@ pub struct HostExports<C: Blockchain> {
     templates: Arc<Vec<DataSourceTemplate<C>>>,
     pub(crate) link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
+    bus_sender: Sender<String>,
 }
 
 impl<C: Blockchain> HostExports<C> {
@@ -79,6 +80,7 @@ impl<C: Blockchain> HostExports<C> {
         templates: Arc<Vec<DataSourceTemplate<C>>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
+        bus_sender: Sender<String>,
     ) -> Self {
         Self {
             subgraph_id,
@@ -91,6 +93,7 @@ impl<C: Blockchain> HostExports<C> {
             templates,
             link_resolver,
             ens_lookup,
+            bus_sender,
         }
     }
 
@@ -209,6 +212,11 @@ impl<C: Blockchain> HostExports<C> {
         gas.consume_host_fn(gas::STORE_GET.with_args(complexity::Linear, (&store_key, &result)))?;
 
         Ok(result)
+    }
+
+    pub(crate) fn bus_send(&self, value: String, gas: &GasCounter) -> Result<(), HostExportError> {
+        self.bus_sender.clone().send(value);
+        Ok(())
     }
 
     /// Prints the module of `n` in hex.

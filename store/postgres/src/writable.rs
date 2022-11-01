@@ -22,7 +22,7 @@ use graph::{
         BlockPtr, DeploymentHash, EntityModification, Error, Logger, StopwatchMetrics, StoreError,
         StoreEvent, UnfailOutcome, ENV_VARS,
     },
-    slog::{debug, error, warn},
+    slog::{error, warn},
     util::backoff::ExponentialBackoff,
 };
 use store::StoredDynamicDataSource;
@@ -453,24 +453,16 @@ impl Request {
                 deterministic_errors,
                 manifest_idx_and_name,
                 offchain_to_remove,
-            } => {
-                if mods.len() > 0 {
-                    warn!(logger, "Request Execute..."; "at_block" => block_ptr_to.number);
-                    for single_mod in mods {
-                        debug!(logger, "Modification explain"; "modification=" => format!("{:?}", single_mod));
-                    }
-                }
-                store.transact_block_operations(
-                    block_ptr_to,
-                    firehose_cursor,
-                    mods,
-                    stopwatch,
-                    data_sources,
-                    deterministic_errors,
-                    manifest_idx_and_name,
-                    offchain_to_remove,
-                )
-            }
+            } => store.transact_block_operations(
+                block_ptr_to,
+                firehose_cursor,
+                mods,
+                stopwatch,
+                data_sources,
+                deterministic_errors,
+                manifest_idx_and_name,
+                offchain_to_remove,
+            ),
             Request::RevertTo {
                 store,
                 block_ptr,
