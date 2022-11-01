@@ -16,7 +16,7 @@ use graph::prelude::{SubgraphInstanceManager as SubgraphInstanceManagerTrait, *}
 use graph::{blockchain::BlockchainMap, components::store::DeploymentLocator};
 use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
-use std::sync::mpsc::sync_channel;
+use tokio::sync::mpsc::unbounded_channel;
 use tokio::task;
 
 pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
@@ -340,7 +340,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         let deployment_head = store.block_ptr().map(|ptr| ptr.number).unwrap_or(0) as f64;
         block_stream_metrics.deployment_head.set(deployment_head);
 
-        let (sender, receiver) = sync_channel(10);
+        let (sender, mut receiver) = unbounded_channel();
         let host_builder = graph_runtime_wasm::RuntimeHostBuilder::new(
             chain.runtime_adapter(),
             self.link_resolver.cheap_clone(),
@@ -410,6 +410,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         // it has a dedicated OS thread so the OS will handle the preemption. See
         // https://github.com/tokio-rs/tokio/issues/3493.
         let bus_logger = logger.cheap_clone();
+
         graph::spawn_thread(deployment.to_string(), move || {
             let runner = SubgraphRunner::new(inputs, ctx, logger.cheap_clone(), metrics);
             if let Err(e) = graph::block_on(task::unconstrained(runner.run())) {
@@ -422,17 +423,14 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             subgraph_metrics_unregister.unregister(registry);
         });
 
-        graph::spawn_thread("bus-work", move || {
-            while let Ok(data) = receiver.recv() {
-                let subgraph_id = deployment.hash.clone();
+        tokio::spawn(async move {
+            while let Some(data) = receiver.recv().await {
+                let subgraph_id: DeploymentHash = deployment.hash.clone();
                 warn!(bus_logger, "Sending to Bus"; "value" => &data, "subgraph_id" => subgraph_id.as_str());
 
-                match self.bus.send_plain_text(data, deployment.hash.clone()) {
-                    Err(shit_happned) => {
-                        error!(bus_logger, "Failed sending to Bus"; "reason" => format!("{:?}", shit_happned));
-                    }
-                    _ => (),
-                }
+                if let Err(err) = self.bus.send_plain_text(data, deployment.hash.clone()) {
+                    error!(bus_logger, "Failed sending to Bus"; "reason" => format!("{:?}", err));
+                };
             }
         });
 

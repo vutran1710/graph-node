@@ -29,19 +29,20 @@ impl Bus for RabbitmqBus {
         self.name.as_str()
     }
 
-    fn send_plain_text(&self, text: String, subgraph_id: DeploymentHash) -> Result<(), BusError> {
+    fn send_plain_text(&self, text: String, deployment: DeploymentHash) -> Result<(), BusError> {
         // NOTE: this is very UGLY, but we are doing POC, so its ok for now
         let data_as_bytes = text.as_bytes();
-        let routing_key = subgraph_id.as_str();
+        let routing_key = deployment.as_str();
+        let exchange_name = deployment.as_str();
         let mut exchange_opts = ExchangeDeclareOptions::default();
         exchange_opts.durable = true;
 
         return match self.connection.lock() {
             Ok(mut conn) => match conn.open_channel(None) {
-                Ok(chan) => {
-                    match chan.exchange_declare(
-                        ExchangeType::Fanout,
-                        format!("{:?}", subgraph_id),
+                Ok(channel) => {
+                    match channel.exchange_declare(
+                        ExchangeType::Topic,
+                        exchange_name,
                         exchange_opts.clone(),
                     ) {
                         Ok(exchange) => {

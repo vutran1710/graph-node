@@ -18,7 +18,7 @@ use graph::runtime::gas::{self, complexity, Gas, GasCounter};
 pub use graph::runtime::{DeterministicHostError, HostExportError};
 use never::Never;
 use semver::Version;
-use std::sync::mpsc::SyncSender as Sender;
+use tokio::sync::mpsc::UnboundedSender;
 use wasmtime::Trap;
 use web3::types::H160;
 
@@ -69,7 +69,7 @@ pub struct HostExports<C: Blockchain> {
     templates: Arc<Vec<DataSourceTemplate<C>>>,
     pub(crate) link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
-    bus_sender: Sender<String>,
+    bus_sender: UnboundedSender<String>,
 }
 
 impl<C: Blockchain> HostExports<C> {
@@ -80,7 +80,7 @@ impl<C: Blockchain> HostExports<C> {
         templates: Arc<Vec<DataSourceTemplate<C>>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: Sender<String>,
+        bus_sender: UnboundedSender<String>,
     ) -> Self {
         Self {
             subgraph_id,

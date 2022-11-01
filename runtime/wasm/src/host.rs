@@ -4,7 +4,7 @@ use std::time::Instant;
 use async_trait::async_trait;
 use futures::sync::mpsc::Sender;
 use futures03::channel::oneshot::channel;
-use std::sync::mpsc::SyncSender;
+use tokio::sync::mpsc::UnboundedSender;
 
 use graph::blockchain::{Blockchain, HostFn, RuntimeAdapter};
 use graph::components::store::{EnsLookup, SubgraphFork};
@@ -25,7 +25,7 @@ pub struct RuntimeHostBuilder<C: Blockchain> {
     runtime_adapter: Arc<dyn RuntimeAdapter<C>>,
     link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
-    bus_sender: SyncSender<String>,
+    bus_sender: UnboundedSender<String>,
 }
 
 impl<C: Blockchain> Clone for RuntimeHostBuilder<C> {
@@ -44,7 +44,7 @@ impl<C: Blockchain> RuntimeHostBuilder<C> {
         runtime_adapter: Arc<dyn RuntimeAdapter<C>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: SyncSender<String>,
+        bus_sender: UnboundedSender<String>,
     ) -> Self {
         RuntimeHostBuilder {
             runtime_adapter,
@@ -128,7 +128,7 @@ where
         mapping_request_sender: Sender<MappingRequest<C>>,
         metrics: Arc<HostMetrics>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: SyncSender<String>,
+        bus_sender: UnboundedSender<String>,
     ) -> Result<Self, Error> {
         // Create new instance of externally hosted functions invoker. The `Arc` is simply to avoid
         // implementing `Clone` for `HostExports`.
