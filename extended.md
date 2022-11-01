@@ -5,12 +5,13 @@ Main Tasks
   - [ ] define routing mechanism
 - Implement Bus/message-send-request for Wasm
   - [x] customize @graphprotocol/graph-ts
-  - [ ] define bus-sender in wasm-host
-- Allow wasm to call bus
+  - [x] define bus-sender in wasm-host
+- [x] Allow wasm to call bus
+
+
 
 
 TODO
-1. Add `dest: Eithe<Store|Bus>` to subgraph template, parsing, validate etc
-2. Read trigger data and pick what `dest` to send data to
-3. Customize `WasmRuntimeHost`.
-4. Customize `@graphnodeprotocol/graph-ts`: add `Bus` module
+1. Routing/Categorizing analysis
+2. Define Bus Types/Config that our graphnode supports in a separate Rust package
+3. Define Bus Types/Config that our graphnode supports in a separate Typescript package
