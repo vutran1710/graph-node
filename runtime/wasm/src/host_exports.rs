@@ -214,8 +214,9 @@ impl<C: Blockchain> HostExports<C> {
         Ok(result)
     }
 
-    pub(crate) fn bus_send(&self, value: String, gas: &GasCounter) -> Result<(), HostExportError> {
-        self.bus_sender.clone().send(value);
+    pub(crate) fn bus_send(&self, value: String, _gas: &GasCounter) -> Result<(), HostExportError> {
+        // NOTE: Always OK because we dont want to interrupt/terminate the WasmRuntimeHost
+        let _send = self.bus_sender.clone().send(value);
         Ok(())
     }
 

@@ -522,13 +522,3 @@ pub trait StatusStore: Send + Sync + 'static {
         block_number: BlockNumber,
     ) -> Result<Option<(PartialBlockPtr, [u8; 32])>, StoreError>;
 }
-
-#[async_trait]
-pub trait EventStore: Send + Sync + 'static {
-    async fn publish_data(
-        &self,
-        block_ptr_to: BlockPtr,
-        mods: Vec<EntityModification>,
-        manifest_idx_and_name: Vec<(u32, String)>,
-    ) -> ();
-}

@@ -441,7 +441,7 @@ enum Request {
 }
 
 impl Request {
-    fn execute(&self, logger: &Logger) -> Result<(), StoreError> {
+    fn execute(&self, _logger: &Logger) -> Result<(), StoreError> {
         match self {
             Request::Write {
                 store,

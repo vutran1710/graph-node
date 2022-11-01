@@ -380,8 +380,6 @@ where
         } = block_state;
 
         let first_error = deterministic_errors.first().cloned();
-        let cloned_block_ptr = block_ptr.clone();
-        let cloned_mods = mods.clone();
 
         store
             .transact_block_operations(
@@ -396,17 +394,6 @@ where
             )
             .await
             .context("Failed to transact block operations")?;
-
-        // info!(self.logger, "Sending modifications via Bus"; "bus" => self.inputs.bus.get_name());
-        // self.inputs
-        //     .bus
-        //     .send_modification_data(
-        //         cloned_block_ptr,
-        //         cloned_mods,
-        //         self.inputs.manifest_idx_and_name.clone(),
-        //     )
-        //     .await
-        //     .context("Failed to send bus message")?;
 
         // For subgraphs with `nonFatalErrors` feature disabled, we consider
         // any error as fatal.
