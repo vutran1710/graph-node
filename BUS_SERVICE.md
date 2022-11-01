@@ -12,6 +12,7 @@ Main Tasks
 
 
 TODO
-1. Routing/Categorizing analysis
-2. Define Bus Types/Config that our graphnode supports in a separate Rust package
-3. Define Bus Types/Config that our graphnode supports in a separate Typescript package
+- [ ] Update config to pass bus uri from env
+- [ ] Routing/Categorizing analysis
+- [ ] Define Bus Types/Config that our graphnode supports in a separate Rust package
+- [ ] Define Bus Types/Config that our graphnode supports in a separate Typescript package
