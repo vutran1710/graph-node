@@ -29,29 +29,36 @@ impl Bus for RabbitmqBus {
     fn get_name(&self) -> &str {
         self.name.as_str()
     }
-    async fn send_plain_text(
-        &self,
-        text: String,
-        subgraph_id: DeploymentHash,
-    ) -> Result<(), BusError> {
-        let mut connection = self.connection.lock().unwrap();
-        let channel = connection.open_channel(None).unwrap();
+    fn send_plain_text(&self, text: String, subgraph_id: DeploymentHash) -> Result<(), BusError> {
+        let data_as_bytes = text.as_bytes();
+        let routing_key = subgraph_id.as_str();
         let mut exchange_opts = ExchangeDeclareOptions::default();
         exchange_opts.durable = true;
 
-        let data_as_bytes = text.as_bytes();
-        let routing_key = "bus-test";
-        let exchange = channel
-            .exchange_declare(
-                ExchangeType::Fanout,
-                format!("{:?}", subgraph_id),
-                exchange_opts.clone(),
-            )
-            .unwrap();
-
-        let _send = exchange.publish(Publish::new(data_as_bytes.clone(), routing_key));
-        Ok(())
+        return match self.connection.lock() {
+            Ok(mut conn) => match conn.open_channel(None) {
+                Ok(chan) => {
+                    match chan.exchange_declare(
+                        ExchangeType::Fanout,
+                        format!("{:?}", subgraph_id),
+                        exchange_opts.clone(),
+                    ) {
+                        Ok(exchange) => {
+                            match exchange.publish(Publish::new(data_as_bytes.clone(), routing_key))
+                            {
+                                Ok(()) => Ok(()),
+                                Err(e) => Err(BusError::SendPlainTextError(e.to_string())),
+                            }
+                        }
+                        Err(e) => Err(BusError::SendPlainTextError(e.to_string())),
+                    }
+                }
+                Err(e) => Err(BusError::SendPlainTextError(e.to_string())),
+            },
+            Err(e) => Err(BusError::SendPlainTextError(e.to_string())),
+        };
     }
+
     async fn send_trigger_data(&self) -> Result<(), BusError> {
         Ok(())
     }

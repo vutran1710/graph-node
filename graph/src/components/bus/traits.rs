@@ -11,11 +11,7 @@ pub trait Bus: Send + Sync + 'static {
 
     fn get_name(&self) -> &str;
 
-    async fn send_plain_text(
-        &self,
-        value: String,
-        subgraph_id: DeploymentHash,
-    ) -> Result<(), BusError>;
+    fn send_plain_text(&self, value: String, subgraph_id: DeploymentHash) -> Result<(), BusError>;
 
     async fn send_trigger_data(&self) -> Result<(), BusError>;
 

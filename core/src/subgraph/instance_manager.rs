@@ -410,6 +410,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         // scheduling. It is also logical in terms of performance to run this with `unconstrained`,
         // it has a dedicated OS thread so the OS will handle the preemption. See
         // https://github.com/tokio-rs/tokio/issues/3493.
+        let bus_logger = logger.cheap_clone();
         graph::spawn_thread(deployment.to_string(), move || {
             let runner = SubgraphRunner::new(inputs, ctx, logger.cheap_clone(), metrics);
             if let Err(e) = graph::block_on(task::unconstrained(runner.run())) {
@@ -424,7 +425,15 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
 
         graph::spawn_thread("bus-work", move || {
             while let Ok(data) = receiver.recv() {
-                let _bus_send = self.bus.send_plain_text(data, deployment.hash.clone());
+                let subgraph_id = deployment.hash.clone();
+                warn!(bus_logger, "Sending to Bus"; "value" => &data, "subgraph_id" => subgraph_id.as_str());
+
+                match self.bus.send_plain_text(data, deployment.hash.clone()) {
+                    Err(shit_happned) => {
+                        error!(bus_logger, "Failed sending to Bus"; "reason" => format!("{:?}", shit_happned));
+                    }
+                    _ => (),
+                }
             }
         });
 
