@@ -441,7 +441,6 @@ where
         );
 
         for trigger in triggers {
-            // warn!(self.logger, "Trigger data"; "data" => format!("{:?}", trigger.on));
             block_state = self
                 .ctx
                 .process_trigger(
