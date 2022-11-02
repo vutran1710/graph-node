@@ -13,6 +13,7 @@ use graph_runtime_wasm::{HostExports, MappingContext};
 use semver::Version;
 use std::env;
 use std::str::FromStr;
+use tokio::sync::mpsc::UnboundedSender;
 use web3::types::Address;
 
 lazy_static! {
@@ -27,6 +28,7 @@ fn mock_host_exports(
     data_source: DataSource,
     store: Arc<impl SubgraphStore>,
     api_version: Version,
+    bus_sender: UnboundedSender<String>,
 ) -> HostExports<Chain> {
     let templates = vec![data_source::DataSourceTemplate::Onchain(
         DataSourceTemplate {
@@ -66,6 +68,7 @@ fn mock_host_exports(
             Arc::new(EnvVars::default()),
         )),
         ens_lookup,
+        bus_sender,
     )
 }
 
@@ -95,6 +98,7 @@ pub fn mock_context(
     data_source: DataSource,
     store: Arc<impl SubgraphStore>,
     api_version: Version,
+    bus_sender: UnboundedSender<String>,
 ) -> MappingContext<Chain> {
     MappingContext {
         logger: Logger::root(slog::Discard, o!()),
@@ -107,6 +111,7 @@ pub fn mock_context(
             data_source,
             store.clone(),
             api_version,
+            bus_sender,
         )),
         state: BlockState::new(
             futures03::executor::block_on(store.writable(LOGGER.clone(), deployment.id)).unwrap(),
