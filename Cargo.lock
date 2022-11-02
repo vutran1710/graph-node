@@ -4652,6 +4652,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-bus"
+version = "0.1.0"
+dependencies = [
+ "graph",
+]
+
+[[package]]
 name = "test-store"
 version = "0.28.2"
 dependencies = [

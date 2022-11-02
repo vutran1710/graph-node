@@ -15,6 +15,7 @@ members = [
     "store/postgres",
     "store/test-store",
     "bus/rabbitmq",
+    "bus/test-bus",
     "graph",
     "tests",
 ]
