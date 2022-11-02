@@ -8,7 +8,6 @@ use std::time::Duration;
 use crate::helpers::run_cmd;
 use anyhow::Error;
 use async_stream::stream;
-use bus_rabbitmq::RabbitmqBus;
 use futures::{Stream, StreamExt};
 use graph::blockchain::block_stream::{
     BlockStream, BlockStreamBuilder, BlockStreamEvent, BlockWithTriggers, FirehoseCursor,
@@ -46,6 +45,7 @@ use std::env::VarError;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use test_bus::TestBus;
 use tokio::fs::read_to_string;
 
 const NODE_ID: &str = "default";
@@ -105,7 +105,7 @@ pub struct TestContext {
     pub logger: Logger,
     pub provider: Arc<
         IpfsSubgraphAssignmentProvider<
-            SubgraphInstanceManager<graph_store_postgres::SubgraphStore, RabbitmqBus>,
+            SubgraphInstanceManager<graph_store_postgres::SubgraphStore, TestBus>,
         >,
     >,
     pub store: Arc<SubgraphStore>,
@@ -253,7 +253,7 @@ pub async fn setup<C: Blockchain>(
     );
 
     let blockchain_map = Arc::new(blockchain_map);
-    let bus = RabbitmqBus::new(
+    let bus = TestBus::new(
         String::from("amqp://guest:guest@localhost:5672"),
         logger.clone(),
     );
