@@ -1,3 +1,4 @@
+use crate::bus_initializer::BusInitializer;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,7 +15,6 @@ use futures::TryFutureExt;
 use graph::anyhow::{bail, format_err, Error};
 use graph::blockchain::{BlockchainKind, BlockchainMap, ChainIdentifier};
 use graph::cheap_clone::CheapClone;
-use graph::components::bus::Bus;
 use graph::components::store::{BlockStore as _, DeploymentLocator};
 use graph::env::EnvVars;
 use graph::firehose::FirehoseEndpoints;
@@ -33,8 +33,6 @@ use graph_core::{
     SubgraphInstanceManager, SubgraphRegistrar as IpfsSubgraphRegistrar,
 };
 use url::Url;
-
-use bus_rabbitmq::RabbitmqBus;
 
 fn locate(store: &dyn SubgraphStore, hash: &str) -> Result<DeploymentLocator, anyhow::Error> {
     let mut locators = store.locators(&hash)?;
@@ -156,16 +154,13 @@ pub async fn run(
     blockchain_map.insert(network_name.clone(), Arc::new(chain));
 
     let static_filters = ENV_VARS.experimental_static_filters;
-    let bus = RabbitmqBus::new(
-        String::from("amqp://guest:guest@localhost:5672"),
-        logger.clone(),
-    );
+    let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone());
 
     let blockchain_map = Arc::new(blockchain_map);
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         subgraph_store.clone(),
-        Some(Arc::new(bus)),
+        bus.and_then(|b| Some(Arc::new(b))),
         blockchain_map.clone(),
         metrics_registry.clone(),
         link_resolver.cheap_clone(),

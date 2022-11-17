@@ -1,4 +1,6 @@
-use bus_rabbitmq::RabbitmqBus;
+mod bus_initializer;
+
+use bus_initializer::BusInitializer;
 use clap::Parser as _;
 use ethereum::chain::{EthereumAdapterSelector, EthereumStreamBuilder};
 use ethereum::{
@@ -7,7 +9,6 @@ use ethereum::{
 use git_testament::{git_testament, render_testament};
 use graph::blockchain::firehose_block_ingestor::FirehoseBlockIngestor;
 use graph::blockchain::{Block as BlockchainBlock, Blockchain, BlockchainKind, BlockchainMap};
-use graph::components::bus::*;
 use graph::components::store::BlockStore;
 use graph::data::graphql::effort::LoadManager;
 use graph::env::EnvVars;
@@ -415,15 +416,12 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
-        let bus = RabbitmqBus::new(
-            String::from("amqp://guest:guest@localhost:5672"),
-            logger.clone(),
-        );
+        let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone());
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
             network_store.subgraph_store(),
-            Some(Arc::new(bus)),
+            bus.and_then(|b| Some(Arc::new(b))),
             blockchain_map.cheap_clone(),
             metrics_registry.clone(),
             link_resolver.clone(),
