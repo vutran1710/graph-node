@@ -165,7 +165,7 @@ pub async fn run(
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         subgraph_store.clone(),
-        Arc::new(bus),
+        Some(Arc::new(bus)),
         blockchain_map.clone(),
         metrics_registry.clone(),
         link_resolver.cheap_clone(),

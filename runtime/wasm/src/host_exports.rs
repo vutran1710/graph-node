@@ -69,7 +69,7 @@ pub struct HostExports<C: Blockchain> {
     templates: Arc<Vec<DataSourceTemplate<C>>>,
     pub(crate) link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
-    bus_sender: UnboundedSender<String>,
+    bus_sender: Option<UnboundedSender<String>>,
 }
 
 impl<C: Blockchain> HostExports<C> {
@@ -80,7 +80,7 @@ impl<C: Blockchain> HostExports<C> {
         templates: Arc<Vec<DataSourceTemplate<C>>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: UnboundedSender<String>,
+        bus_sender: Option<UnboundedSender<String>>,
     ) -> Self {
         Self {
             subgraph_id,
@@ -216,7 +216,9 @@ impl<C: Blockchain> HostExports<C> {
 
     pub(crate) fn bus_send(&self, value: String, _gas: &GasCounter) -> Result<(), HostExportError> {
         // NOTE: Always OK because we dont want to interrupt/terminate the WasmRuntimeHost
-        let _send = self.bus_sender.clone().send(value);
+        if let Some(sender) = &self.bus_sender {
+            let _send = sender.clone().send(value);
+        }
         Ok(())
     }
 
