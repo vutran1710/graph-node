@@ -4278,10 +4278,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-name = "sha1"
-version = "0.10.5"
-=======
 name = "sha-1"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4295,7 +4291,6 @@ dependencies = [
 [[package]]
 name = "sha2"
 version = "0.9.5"
->>>>>>> master
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
 dependencies = [
@@ -5063,11 +5058,6 @@ dependencies = [
  "rand",
  "slab",
  "tokio",
-<<<<<<< HEAD
- "tokio-util 0.7.4",
- "tower-layer 0.3.2",
- "tower-service 0.3.2",
-=======
  "tokio-util 0.7.1",
  "tower-layer 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tower-service 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5089,7 +5079,6 @@ dependencies = [
  "tokio-util 0.7.1",
  "tower-layer 0.3.1 (git+https://github.com/tower-rs/tower.git)",
  "tower-service 0.3.1 (git+https://github.com/tower-rs/tower.git)",
->>>>>>> master
  "tracing",
 ]
 
@@ -5119,16 +5108,12 @@ source = "git+https://github.com/tower-rs/tower.git#c9d84cde0c9a23e1d2d5b5ae7ae4
 
 [[package]]
 name = "tower-layer"
-<<<<<<< HEAD
-version = "0.3.2"
-=======
 version = "0.3.1"
 source = "git+https://github.com/tower-rs/tower.git#c9d84cde0c9a23e1d2d5b5ae7ae432629712658b"
 
 [[package]]
 name = "tower-service"
 version = "0.3.1"
->>>>>>> master
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
 
@@ -5136,15 +5121,6 @@ checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
 name = "tower-service"
 version = "0.3.1"
 source = "git+https://github.com/tower-rs/tower.git#c9d84cde0c9a23e1d2d5b5ae7ae432629712658b"
-<<<<<<< HEAD
-
-[[package]]
-name = "tower-service"
-version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
-=======
->>>>>>> master
 
 [[package]]
 name = "tower-test"
@@ -5219,10 +5195,6 @@ dependencies = [
  "bytes",
  "http",
  "httparse",
-<<<<<<< HEAD
- "input_buffer 0.4.0",
-=======
->>>>>>> master
  "log",
  "rand",
  "sha-1 0.10.0",
