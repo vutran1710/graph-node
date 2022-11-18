@@ -433,7 +433,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         self.bus.clone().and_then(|bus| receiver.and_then(|mut rec| {
             tokio::spawn(async move {
                 while let Some(data) = rec.recv().await {
-                    let subgraph_id: DeploymentHash = deployment.hash.clone();
+                    let subgraph_id = deployment.hash.clone();
                     warn!(bus_logger, "Sending to Bus"; "value" => &data, "subgraph_id" => subgraph_id.as_str());
 
                     if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()) {
