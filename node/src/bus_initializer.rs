@@ -10,19 +10,7 @@ pub enum BusScheme {
 }
 
 impl BusInitializer {
-    pub fn new(uri: Option<String>, logger: graph::slog::Logger) -> Option<impl Bus> {
-        match BusInitializer::get_bus_scheme(&uri) {
-            Some(BusScheme::RabbitMQ) => {
-                warn!(logger, "Starting Bus of RabbitMQ";);
-                Some(RabbitmqBus::new(uri.unwrap(), logger))
-            }
-            _ => {
-                warn!(logger, "No bus at work";);
-                None
-            }
-        }
-    }
-    pub fn get_bus_scheme(uri: &Option<String>) -> Option<BusScheme> {
+    fn get_bus_scheme(uri: &Option<String>) -> Option<BusScheme> {
         if uri.is_none() {
             return None;
         }
@@ -36,5 +24,18 @@ impl BusInitializer {
                 })
         });
         return scheme;
+    }
+
+    pub fn new(uri: Option<String>, logger: graph::slog::Logger) -> Option<impl Bus> {
+        match BusInitializer::get_bus_scheme(&uri) {
+            Some(BusScheme::RabbitMQ) => {
+                warn!(logger, "Starting Bus of RabbitMQ";);
+                Some(RabbitmqBus::new(uri.unwrap(), logger))
+            }
+            _ => {
+                warn!(logger, "No bus at work";);
+                None
+            }
+        }
     }
 }
