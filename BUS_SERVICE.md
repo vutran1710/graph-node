@@ -11,11 +11,11 @@ Main Tasks
 
 TODO
 - [x] Fix test
-- [ ] Update config to pass bus uri from env
+- [x] Update config to pass bus uri from env
 - [ ] Routing/Categorizing analysis
 - [ ] Define Bus Types/Config that our graphnode supports in a separate Rust package
 - [ ] Define Bus Types/Config that our graphnode supports in a separate Typescript package
 
 
 IMPORTANT!!
-- [ ] Backward Compatible (Bus-Service should be adhoc only)
+- [x] Backward Compatible (Bus-Service should be adhoc only)
