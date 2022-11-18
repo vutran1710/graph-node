@@ -37,3 +37,11 @@ Updating version of the Cargo.{lock, toml} files succeded!
 ```
 
 This script contains several assertions to make sure no mistake has been made. Unfortunately for now we don't have a way to revert it, or to recover from an error when it fails in the middle of it, this can be improved in the future.
+
+```
+cargo run -p graph-node --release -- \
+--postgres-url postgresql://graph-node:let-me-in@localhost:5432/graph-node \
+--ethereum-rpc polygon:archive:https://polygon-mainnet.g.alchemy.com/v2/NopMECFaL2nSYsCRflZ9dOTNxWV3BZy- \
+--bus-url amqp://guest:guest@localhost:5672 \
+--ipfs 127.0.0.1:5001
+```

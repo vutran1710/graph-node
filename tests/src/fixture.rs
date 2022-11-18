@@ -260,7 +260,7 @@ pub async fn setup<C: Blockchain>(
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         subgraph_store.clone(),
-        Arc::new(bus),
+        Some(Arc::new(bus)),
         blockchain_map.clone(),
         mock_registry.clone(),
         link_resolver.cheap_clone(),

@@ -18,6 +18,7 @@ pub struct RabbitmqBus {
 impl Bus for RabbitmqBus {
     fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
         let connection = Connection::insecure_open(&connection_uri).unwrap();
+
         RabbitmqBus {
             name: String::from("my rabbit store"),
             connection: Arc::new(Mutex::new(connection)),
