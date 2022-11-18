@@ -1,6 +1,7 @@
 use bus_rabbitmq::RabbitmqBus;
 use graph::components::bus::Bus;
 use graph::slog::warn;
+use regex::Regex;
 
 pub struct BusInitializer;
 
@@ -26,10 +27,14 @@ impl BusInitializer {
             return None;
         }
 
-        let scheme = &uri.clone().unwrap()[0..8];
-        match String::from(scheme).as_str() {
-            "amqp" => Some(BusScheme::RabbitMQ),
-            _ => None,
-        }
+        let re = Regex::new(r"^\w+").unwrap();
+        let scheme = uri.clone().and_then(|text| {
+            re.find(text.as_str())
+                .and_then(|regex_match| match regex_match.as_str() {
+                    "amqp" => Some(BusScheme::RabbitMQ),
+                    _ => None,
+                })
+        });
+        return scheme;
     }
 }
