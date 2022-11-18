@@ -416,7 +416,7 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
-        let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone());
+        let bus = BusInitializer::new(ENV_VARS.bus_url.clone().or(opt.bus_url), logger.clone());
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
