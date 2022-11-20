@@ -4,26 +4,43 @@ use graph::components::bus::Bus;
 use graph::components::bus::BusError;
 use graph::prelude::DeploymentHash;
 use graph::prelude::Logger;
+use graph::tokio::sync::mpsc::unbounded_channel;
+use graph::tokio::sync::mpsc::UnboundedReceiver;
+use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::MutexGuard;
 
 #[derive(Clone)]
 pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
     connection: Arc<Mutex<Connection>>,
+    s: UnboundedSender<String>,
+    r: Arc<Mutex<UnboundedReceiver<String>>>,
 }
 
 #[async_trait]
 impl Bus for RabbitmqBus {
     fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
         let connection = Connection::insecure_open(&connection_uri).unwrap();
+        let (s, r) = unbounded_channel();
 
         RabbitmqBus {
             name: String::from("my rabbit store"),
             connection: Arc::new(Mutex::new(connection)),
             logger,
+            s,
+            r: Arc::new(Mutex::new(r)),
         }
+    }
+
+    fn mpsc_sender(&self) -> UnboundedSender<String> {
+        self.s.clone()
+    }
+
+    fn mpsc_receiver(&self) -> MutexGuard<UnboundedReceiver<String>> {
+        self.r.lock().unwrap()
     }
 
     fn get_name(&self) -> &str {

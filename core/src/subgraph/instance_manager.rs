@@ -1,9 +1,9 @@
 use crate::polling_monitor::IpfsService;
-use crate::subgraph::context::{IndexingContext, SharedInstanceKeepAliveMap};
+use crate::subgraph::context::{IndexingContext, OffchainMonitor, SharedInstanceKeepAliveMap};
 use crate::subgraph::inputs::IndexingInputs;
 use crate::subgraph::loader::load_dynamic_data_sources;
-
 use crate::subgraph::runner::SubgraphRunner;
+use crate::subgraph::SubgraphTriggerProcessor;
 use graph::blockchain::block_stream::BlockStreamMetrics;
 use graph::blockchain::Blockchain;
 use graph::blockchain::NodeCapabilities;
@@ -16,7 +16,6 @@ use graph::prelude::{SubgraphInstanceManager as SubgraphInstanceManagerTrait, *}
 use graph::{blockchain::BlockchainMap, components::store::DeploymentLocator};
 use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
-use tokio::sync::mpsc::unbounded_channel;
 use tokio::task;
 
 pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
@@ -179,6 +178,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             link_resolver,
             ipfs_service,
             static_filters,
+            bus,
         }
     }
 
@@ -364,19 +364,11 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         let deployment_head = store.block_ptr().map(|ptr| ptr.number).unwrap_or(0) as f64;
         block_stream_metrics.deployment_head.set(deployment_head);
 
-        let (sender, receiver) = match self.bus {
-            Some(_) => {
-                let (send, rec) = unbounded_channel();
-                (Some(send), Some(rec))
-            }
-            None => (None, None),
-        };
-
         let host_builder = graph_runtime_wasm::RuntimeHostBuilder::new(
             chain.runtime_adapter(),
             self.link_resolver.cheap_clone(),
             subgraph_store.ens_lookup(),
-            sender,
+            self.bus.clone().map(|b| b.mpsc_sender()),
         );
 
         let features = manifest.features.clone();
@@ -477,19 +469,31 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             subgraph_metrics_unregister.unregister(registry);
         });
 
-        self.bus.clone().and_then(|bus| receiver.and_then(|mut rec| {
-            tokio::spawn(async move {
-                while let Some(data) = rec.recv().await {
-                    let subgraph_id = deployment.hash.clone();
-                    warn!(bus_logger, "Sending to Bus"; "value" => &data, "subgraph_id" => subgraph_id.as_str());
+        self.bus.clone().and_then(|bus| {
+            let job_name = format!("{}::bus-service", deployment.to_string());
+            graph::spawn_thread(job_name, move || {
+                graph::block_on(async move {
+                    let mut receiver = bus.mpsc_receiver();
+                    while let Some(data) = receiver.recv().await {
+                        warn!(
+                            bus_logger,
+                            "Sending to Bus";
+                            "value" => &data,
+                            "subgraph_id" => deployment.hash.clone().as_str()
+                        );
 
-                    if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()) {
-                        error!(bus_logger, "Failed sending to Bus"; "reason" => format!("{:?}", err));
-                    };
-                }
+                        if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()) {
+                            error!(
+                                bus_logger,
+                                "Failed sending to Bus";
+                                "reason" => format!("{:?}", err)
+                            );
+                        }
+                    }
+                });
             });
             Some(())
-        }));
+        });
 
         Ok(())
     }
