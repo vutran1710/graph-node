@@ -7,7 +7,6 @@ use graph::tokio::sync::mpsc::UnboundedReceiver;
 use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::MutexGuard;
 
 #[derive(Clone)]
 pub struct TestBus {
@@ -34,8 +33,8 @@ impl Bus for TestBus {
         self.s.clone()
     }
 
-    fn mpsc_receiver(&self) -> MutexGuard<UnboundedReceiver<String>> {
-        self.r.lock().unwrap()
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
+        self.r.clone()
     }
 
     fn send_plain_text(&self, _text: String, _deployment: DeploymentHash) -> Result<(), BusError> {

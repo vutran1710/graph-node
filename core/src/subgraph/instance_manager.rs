@@ -473,8 +473,9 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             let thread_name = format!("{}::bus-service", deployment.to_string());
             graph::spawn_thread(thread_name, move || {
                 graph::block_on(async move {
-                    let mut receiver = bus.mpsc_receiver();
-                    while let Some(data) = receiver.recv().await {
+                    let r = bus.mpsc_receiver();
+                    let receiver = r.as_ref();
+                    while let Some(data) = receiver.lock().unwrap().recv().await {
                         warn!(
                             bus_logger,
                             "Sending to Bus";

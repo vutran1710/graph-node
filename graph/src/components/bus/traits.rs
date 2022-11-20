@@ -4,7 +4,8 @@ use crate::prelude::Logger;
 use crate::tokio::sync::mpsc::UnboundedReceiver;
 use crate::tokio::sync::mpsc::UnboundedSender;
 use async_trait::async_trait;
-use std::sync::MutexGuard;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 #[async_trait]
 pub trait Bus: Send + Sync + 'static {
@@ -16,5 +17,5 @@ pub trait Bus: Send + Sync + 'static {
 
     fn mpsc_sender(&self) -> UnboundedSender<String>;
 
-    fn mpsc_receiver(&self) -> MutexGuard<UnboundedReceiver<String>>;
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>>;
 }

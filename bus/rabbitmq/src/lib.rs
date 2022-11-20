@@ -9,7 +9,6 @@ use graph::tokio::sync::mpsc::UnboundedReceiver;
 use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::MutexGuard;
 
 #[derive(Clone)]
 pub struct RabbitmqBus {
@@ -39,8 +38,8 @@ impl Bus for RabbitmqBus {
         self.s.clone()
     }
 
-    fn mpsc_receiver(&self) -> MutexGuard<UnboundedReceiver<String>> {
-        self.r.lock().unwrap()
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
+        self.r.clone()
     }
 
     fn get_name(&self) -> &str {
