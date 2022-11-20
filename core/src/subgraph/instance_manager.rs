@@ -469,9 +469,9 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             subgraph_metrics_unregister.unregister(registry);
         });
 
-        self.bus.clone().and_then(|bus| {
-            let job_name = format!("{}::bus-service", deployment.to_string());
-            graph::spawn_thread(job_name, move || {
+        if let Some(bus) = self.bus.clone() {
+            let thread_name = format!("{}::bus-service", deployment.to_string());
+            graph::spawn_thread(thread_name, move || {
                 graph::block_on(async move {
                     let mut receiver = bus.mpsc_receiver();
                     while let Some(data) = receiver.recv().await {
@@ -492,8 +492,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
                     }
                 });
             });
-            Some(())
-        });
+        };
 
         Ok(())
     }
