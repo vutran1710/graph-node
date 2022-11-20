@@ -1,4 +1,4 @@
-use super::*;
+use super::err::BusError;
 use crate::prelude::DeploymentHash;
 use crate::prelude::Logger;
 use async_trait::async_trait;
