@@ -490,7 +490,6 @@ name = "bus-rabbitmq"
 version = "0.1.0"
 dependencies = [
  "amiquip",
- "async-trait",
  "graph",
 ]
 

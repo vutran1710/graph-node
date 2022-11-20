@@ -1,7 +1,7 @@
 use amiquip::{Connection, ExchangeDeclareOptions, ExchangeType, Publish};
-pub use async_trait::*;
 use graph::components::bus::Bus;
 use graph::components::bus::BusError;
+use graph::prelude::async_trait;
 use graph::prelude::DeploymentHash;
 use graph::prelude::Logger;
 use graph::tokio::sync::mpsc::unbounded_channel;

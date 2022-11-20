@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 amiquip = "0.4.2"
-async-trait = "0.1.58"
 graph = { path = "../../graph" }
