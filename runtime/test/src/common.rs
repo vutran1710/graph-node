@@ -68,7 +68,7 @@ fn mock_host_exports(
             Arc::new(EnvVars::default()),
         )),
         ens_lookup,
-        bus_sender,
+        Some(bus_sender),
     )
 }
 
