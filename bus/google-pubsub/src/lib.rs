@@ -11,6 +11,7 @@ use graph::tokio::sync::mpsc::UnboundedReceiver;
 use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
+use url::Url;
 
 #[derive(Clone)]
 pub struct GooglePubSub {
@@ -21,14 +22,13 @@ pub struct GooglePubSub {
 }
 
 fn pubsub_config_from_string(value: String) -> ClientConfig {
+    /* example connection string:
+    pubsub://localhost:8080/PROJECT_ID?pool_size=10
+     */
+    let url = Url::parse(&value).unwrap();
     let mut result = ClientConfig::default();
-    let params = value.split(":").map(String::from).collect::<Vec<String>>();
-    let pool_size = params.get(0).unwrap();
-    let project_id = params.get(1).unwrap();
-    let endpoint = params.get(2).unwrap();
-    result.pool_size = usize::from_str_radix(pool_size, 10).ok();
-    result.project_id = Some(project_id.to_owned());
-    result.endpoint = endpoint.to_owned();
+    result.project_id = Some(url.path_segments().unwrap().next().unwrap().to_owned());
+    result.endpoint = url.host_str().unwrap().to_owned();
     result
 }
 
