@@ -15,6 +15,7 @@ use url::Url;
 
 #[derive(Clone)]
 pub struct GooglePubSub {
+    project_id: String,
     sender: UnboundedSender<String>,
     receiver: Arc<Mutex<UnboundedReceiver<String>>>,
     logger: Logger,
@@ -39,10 +40,12 @@ impl Bus for GooglePubSub {
             .build()
             .unwrap();
         let config = pubsub_config_from_string(connection_uri);
+        let project_id = config.project_id.clone().unwrap();
         let client = builder.block_on(async move { Client::new(config).await.unwrap() });
         let (sender, receiver) = unbounded_channel();
 
         GooglePubSub {
+            project_id,
             client,
             logger,
             sender,
@@ -51,7 +54,7 @@ impl Bus for GooglePubSub {
     }
 
     fn get_name(&self) -> &str {
-        "Google PubSub"
+        &self.project_id
     }
 
     fn mpsc_sender(&self) -> UnboundedSender<String> {
