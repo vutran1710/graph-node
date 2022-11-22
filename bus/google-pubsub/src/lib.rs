@@ -14,8 +14,6 @@ use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct GooglePubSub {
-    pub project_id: String,
-    pub topics: Vec<String>,
     sender: UnboundedSender<String>,
     receiver: Arc<Mutex<UnboundedReceiver<String>>>,
     logger: Logger,
@@ -45,8 +43,6 @@ impl Bus for GooglePubSub {
         let (sender, receiver) = unbounded_channel();
 
         GooglePubSub {
-            project_id: String::from("project"),
-            topics: vec![],
             client,
             logger,
             sender,
@@ -55,7 +51,7 @@ impl Bus for GooglePubSub {
     }
 
     fn get_name(&self) -> &str {
-        self.project_id.as_str()
+        "Google PubSub"
     }
 
     fn mpsc_sender(&self) -> UnboundedSender<String> {
