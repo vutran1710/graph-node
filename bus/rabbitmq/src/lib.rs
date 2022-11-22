@@ -15,31 +15,31 @@ pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
     connection: Arc<Mutex<Connection>>,
-    s: UnboundedSender<String>,
-    r: Arc<Mutex<UnboundedReceiver<String>>>,
+    sender: UnboundedSender<String>,
+    receiver: Arc<Mutex<UnboundedReceiver<String>>>,
 }
 
 #[async_trait]
 impl Bus for RabbitmqBus {
     fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
         let connection = Connection::insecure_open(&connection_uri).unwrap();
-        let (s, r) = unbounded_channel();
+        let (sender, receiver) = unbounded_channel();
 
         RabbitmqBus {
             name: String::from("my rabbit store"),
             connection: Arc::new(Mutex::new(connection)),
             logger,
-            s,
-            r: Arc::new(Mutex::new(r)),
+            sender,
+            receiver: Arc::new(Mutex::new(receiver)),
         }
     }
 
     fn mpsc_sender(&self) -> UnboundedSender<String> {
-        self.s.clone()
+        self.sender.clone()
     }
 
     fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
-        self.r.clone()
+        self.receiver.clone()
     }
 
     fn get_name(&self) -> &str {

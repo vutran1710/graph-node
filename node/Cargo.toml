@@ -38,6 +38,7 @@ graph-server-websocket = { path = "../server/websocket" }
 graph-server-metrics = { path = "../server/metrics" }
 graph-store-postgres = { path = "../store/postgres" }
 bus-rabbitmq = { path = "../bus/rabbitmq" }
+bus-google = { path = "../bus/google-pubsub" }
 regex = "1.5.4"
 serde = { version = "1.0.126", features = ["derive", "rc"] }
 serde_regex = "1.1.0"
