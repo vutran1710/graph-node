@@ -13,11 +13,7 @@ pub trait Bus: Send + Sync + 'static {
 
     fn get_name(&self) -> &str;
 
-    fn send_plain_text(
-        &mut self,
-        value: String,
-        subgraph_id: DeploymentHash,
-    ) -> Result<(), BusError>;
+    fn send_plain_text(&self, value: String, subgraph_id: DeploymentHash) -> Result<(), BusError>;
 
     fn mpsc_sender(&self) -> UnboundedSender<String>;
 

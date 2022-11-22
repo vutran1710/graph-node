@@ -72,18 +72,13 @@ impl Bus for GooglePubSub {
         self.receiver.clone()
     }
 
-    fn send_plain_text(
-        &mut self,
-        value: String,
-        subgraph_id: DeploymentHash,
-    ) -> Result<(), BusError> {
+    fn send_plain_text(&self, value: String, subgraph_id: DeploymentHash) -> Result<(), BusError> {
         let result = self.runtime.block_on(async {
             let topic_name = subgraph_id.as_str();
             let topic = self.client.topic(topic_name);
 
             if !topic.exists(None, None).await.unwrap() {
                 topic.create(None, None, None).await.unwrap();
-                self.topics.insert(topic_name.to_owned());
             }
 
             let publisher = topic.new_publisher(None);
