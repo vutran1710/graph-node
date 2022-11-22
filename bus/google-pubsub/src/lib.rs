@@ -11,10 +11,10 @@ use graph::tokio::runtime::Runtime;
 use graph::tokio::sync::mpsc::unbounded_channel;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
 use graph::tokio::sync::mpsc::UnboundedSender;
+use graph::url::Url;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Mutex;
-use url::Url;
 
 #[derive(Clone)]
 pub struct GooglePubSub {
