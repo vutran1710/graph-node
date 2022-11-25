@@ -2,7 +2,7 @@ mod bus_initializer;
 
 use bus_initializer::BusInitializer;
 use clap::Parser as _;
-use ethereum::chain::{EthereumAdapterSelector, EthereumStreamBuilder};
+use ethereum::chain::{EthereumAdapterSelector, EthereumBlockRefetcher, EthereumStreamBuilder};
 use ethereum::{
     BlockIngestor as EthereumBlockIngestor, EthereumAdapterTrait, EthereumNetworks, RuntimeAdapter,
 };
@@ -96,6 +96,7 @@ fn read_expensive_queries(
 async fn main() {
     env_logger::init();
 
+    let env_vars = Arc::new(EnvVars::from_env().unwrap());
     let opt = opt::Opt::parse();
 
     // Set up logger
@@ -207,10 +208,7 @@ async fn main() {
 
     // Convert the clients into a link resolver. Since we want to get past
     // possible temporary DNS failures, make the resolver retry
-    let link_resolver = Arc::new(LinkResolver::new(
-        ipfs_clients,
-        Arc::new(EnvVars::default()),
-    ));
+    let link_resolver = Arc::new(LinkResolver::new(ipfs_clients, env_vars.cheap_clone()));
 
     // Set up Prometheus registry
     let prometheus_registry = Arc::new(Registry::new());
@@ -260,7 +258,7 @@ async fn main() {
     )
     .await;
 
-    let launch_services = |logger: Logger| async move {
+    let launch_services = |logger: Logger, env_vars: Arc<EnvVars>| async move {
         let subscription_manager = store_builder.subscription_manager();
         let chain_head_update_listener = store_builder.chain_head_update_listener();
         let primary_pool = store_builder.primary_pool();
@@ -420,6 +418,7 @@ async fn main() {
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
+            env_vars.cheap_clone(),
             network_store.subgraph_store(),
             bus.and_then(|b| Some(Arc::new(b))),
             blockchain_map.cheap_clone(),
@@ -548,7 +547,7 @@ async fn main() {
         );
     };
 
-    graph::spawn(launch_services(logger.clone()));
+    graph::spawn(launch_services(logger.clone(), env_vars.cheap_clone()));
 
     // Periodically check for contention in the tokio threadpool. First spawn a
     // task that simply responds to "ping" requests. Then spawn a separate
@@ -701,6 +700,7 @@ fn ethereum_networks_as_chains(
                 eth_adapters.clone(),
                 chain_head_update_listener.clone(),
                 Arc::new(EthereumStreamBuilder {}),
+                Arc::new(EthereumBlockRefetcher {}),
                 Arc::new(adapter_selector),
                 runtime_adapter,
                 ethereum::ENV_VARS.reorg_threshold,
