@@ -9,7 +9,7 @@ pub struct BusMessage {
 }
 
 #[async_trait]
-pub trait Bus: Send + Sync + Clone + 'static {
+pub trait Bus: Send + Sync + 'static {
     async fn new(connection_uri: String, logger: Logger) -> Self;
 
     fn get_name(&self) -> &str;

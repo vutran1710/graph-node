@@ -5,7 +5,6 @@ use graph::prelude::async_trait;
 use graph::prelude::Logger;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
 
-#[derive(Clone)]
 pub struct TestBus {
     name: String,
 }

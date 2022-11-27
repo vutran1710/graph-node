@@ -13,7 +13,6 @@ use graph::url::Url;
 use std::collections::HashSet;
 use std::string::String;
 
-#[derive(Clone)]
 pub struct GooglePubSub {
     project_id: String,
     topics: HashSet<String>,

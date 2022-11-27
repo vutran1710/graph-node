@@ -8,7 +8,6 @@ use graph::tokio::sync::mpsc::UnboundedReceiver;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-#[derive(Clone)]
 pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
