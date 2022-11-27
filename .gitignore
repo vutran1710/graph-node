@@ -27,5 +27,5 @@
 /tests/integration-tests/**/truffle_output
 
 # ignore config file
-*.toml
 sf.*.rs
+key.json

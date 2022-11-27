@@ -7,6 +7,8 @@ pub enum BusError {
     SendMappingError(String),
     SendModificationError(String),
     SendPlainTextError(String),
+    BadMessage,
+    NoRoutingDefinition,
 }
 
 impl Display for BusError {
@@ -23,6 +25,12 @@ impl Display for BusError {
             }
             BusError::InitializationError => {
                 write!(f, "BusError: initialization failed")
+            }
+            BusError::BadMessage => {
+                write!(f, "BusError: bad format message")
+            }
+            BusError::NoRoutingDefinition => {
+                write!(f, "BusError: no routing definition for this")
             }
         }
     }
