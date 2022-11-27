@@ -425,7 +425,7 @@ async fn main() {
                 graph::block_on(async move {
                     let r = bus.mpsc_receiver();
                     let receiver = r.as_ref();
-                    warn!(&bus_logger, "...Loop to consume data from bus");
+                    warn!(&bus_logger, "Loop to consume data from bus");
                     while let Some(data) = receiver.lock().unwrap().recv().await {
                         warn!(
                             bus_logger,

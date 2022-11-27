@@ -80,7 +80,7 @@ impl Bus for GooglePubSub {
                 topic.create(None, None, None).await.unwrap();
             }
 
-            warn!(self.logger, "Topic to send to"; "topic" => topic.fully_qualified_name());
+            warn!(self.logger, "Topic to send to"; "fully_qualified_name" => topic.fully_qualified_name());
 
             let publisher = topic.new_publisher(None);
             let mut msg = PubsubMessage::default();

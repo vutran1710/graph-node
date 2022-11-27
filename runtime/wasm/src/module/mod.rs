@@ -968,7 +968,7 @@ impl<C: Blockchain> WasmInstanceContext<C> {
         any_string: AscPtr<AscString>,
     ) -> Result<(), HostExportError> {
         let send_value: String = asc_get(self, any_string, gas)?;
-        warn!(self.ctx.logger, ".............Bus send request"; "value" => send_value.clone());
+        warn!(self.ctx.logger, "Bus send request"; "value" => send_value.clone());
         let _res = self.ctx.host_exports.bus_send(send_value, gas);
         Ok(())
     }
