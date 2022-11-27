@@ -18,7 +18,6 @@ use graph::blockchain::{
     TriggersAdapter, TriggersAdapterSelector,
 };
 use graph::cheap_clone::CheapClone;
-use graph::components::bus::Bus;
 use graph::components::store::{BlockStore, DeploymentLocator};
 use graph::data::graphql::effort::LoadManager;
 use graph::data::query::{Query, QueryTarget};
@@ -48,7 +47,6 @@ use std::env::VarError;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use test_bus::TestBus;
 use tokio::fs::read_to_string;
 
 const NODE_ID: &str = "default";

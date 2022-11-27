@@ -1,10 +1,7 @@
 use super::err::BusError;
 use crate::prelude::Logger;
 use crate::tokio::sync::mpsc::UnboundedReceiver;
-use crate::tokio::sync::mpsc::UnboundedSender;
 use async_trait::async_trait;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 pub struct BusMessage {
     pub subgraph_id: String,
@@ -19,7 +16,5 @@ pub trait Bus: Send + Sync + Clone + 'static {
 
     async fn send_plain_text(&self, value: BusMessage) -> Result<(), BusError>;
 
-    fn mpsc_sender(&self) -> UnboundedSender<BusMessage>;
-
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>>;
+    async fn start(&self, mut receiver: UnboundedReceiver<BusMessage>) -> ();
 }

@@ -1,7 +1,11 @@
 use bus_google::GooglePubSub;
 // use bus_rabbitmq::RabbitmqBus;
 use graph::components::bus::Bus;
+use graph::components::bus::BusMessage;
 use graph::slog::warn;
+use graph::tokio::sync::mpsc::unbounded_channel;
+use graph::tokio::sync::mpsc::UnboundedReceiver;
+use graph::tokio::sync::mpsc::UnboundedSender;
 use regex::Regex;
 
 pub struct BusInitializer;
@@ -29,7 +33,15 @@ impl BusInitializer {
         return scheme;
     }
 
-    pub async fn new(uri: Option<String>, logger: graph::slog::Logger) -> Option<impl Bus> {
+    pub async fn new(
+        uri: Option<String>,
+        logger: graph::slog::Logger,
+    ) -> (
+        Option<impl Bus>,
+        Option<UnboundedSender<BusMessage>>,
+        Option<UnboundedReceiver<BusMessage>>,
+    ) {
+        let (sender, receiver) = unbounded_channel();
         match BusInitializer::get_bus_scheme(&uri) {
             // Some(BusScheme::RabbitMQ) => {
             //     warn!(logger, "Starting Bus of RabbitMQ";);
@@ -38,11 +50,11 @@ impl BusInitializer {
             Some(BusScheme::GooglePubSub) => {
                 warn!(logger, "Starting GooglePubSub";);
                 let bus = GooglePubSub::new(uri.unwrap(), logger).await;
-                Some(bus)
+                (Some(bus), Some(sender), Some(receiver))
             }
             _ => {
                 warn!(logger, "No bus at work";);
-                None
+                (None, None, None)
             }
         }
     }

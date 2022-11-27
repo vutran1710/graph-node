@@ -1,4 +1,3 @@
-use crate::bus_initializer::BusInitializer;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,7 +15,6 @@ use ethereum::{ProviderEthRpcMetrics, RuntimeAdapter as EthereumRuntimeAdapter};
 use graph::anyhow::{bail, format_err};
 use graph::blockchain::{BlockchainKind, BlockchainMap};
 use graph::cheap_clone::CheapClone;
-use graph::components::bus::Bus;
 use graph::components::store::{BlockStore as _, DeploymentLocator};
 use graph::env::EnvVars;
 use graph::firehose::FirehoseEndpoints;
@@ -148,7 +146,6 @@ pub async fn run(
     blockchain_map.insert(network_name.clone(), Arc::new(chain));
 
     let static_filters = ENV_VARS.experimental_static_filters;
-    let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone()).await;
 
     let blockchain_map = Arc::new(blockchain_map);
     let subgraph_instance_manager = SubgraphInstanceManager::new(
@@ -160,7 +157,7 @@ pub async fn run(
         link_resolver.cheap_clone(),
         ipfs_service,
         static_filters,
-        bus.and_then(|b| Some(b.mpsc_sender())),
+        None,
     );
 
     // Create IPFS-based subgraph provider

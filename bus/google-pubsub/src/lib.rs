@@ -6,22 +6,17 @@ use graph::components::bus::BusError;
 use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
 use graph::prelude::Logger;
+use graph::slog::error;
 use graph::slog::warn;
-use graph::tokio::sync::mpsc::unbounded_channel;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
-use graph::tokio::sync::mpsc::UnboundedSender;
 use graph::url::Url;
 use std::collections::HashSet;
 use std::string::String;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct GooglePubSub {
     project_id: String,
     topics: HashSet<String>,
-    sender: UnboundedSender<BusMessage>,
-    receiver: Arc<Mutex<UnboundedReceiver<BusMessage>>>,
     logger: Logger,
     client: Client,
 }
@@ -48,28 +43,17 @@ impl Bus for GooglePubSub {
         warn!(logger, "PubSub Config"; "msg" => format!("{:?}", config));
         let project_id = config.project_id.clone().unwrap();
         let client = Client::new(config).await.unwrap();
-        let (sender, receiver) = unbounded_channel();
 
         GooglePubSub {
             topics: HashSet::new(),
             project_id,
             client,
             logger,
-            sender,
-            receiver: Arc::new(Mutex::new(receiver)),
         }
     }
 
     fn get_name(&self) -> &str {
         &self.project_id
-    }
-
-    fn mpsc_sender(&self) -> UnboundedSender<BusMessage> {
-        self.sender.clone()
-    }
-
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>> {
-        self.receiver.clone()
     }
 
     async fn send_plain_text(&self, message: BusMessage) -> Result<(), BusError> {
@@ -93,6 +77,26 @@ impl Bus for GooglePubSub {
         match result {
             Ok(_) => Ok(()),
             Err(status) => Err(BusError::SendPlainTextError(status.to_string())),
+        }
+    }
+
+    async fn start(&self, mut receiver: UnboundedReceiver<BusMessage>) -> () {
+        warn!(&self.logger, "Loop to consume data from bus");
+        while let Some(data) = receiver.recv().await {
+            warn!(
+                self.logger,
+                "Sending to Bus";
+                "subgraph_id" => &data.subgraph_id,
+                "value" => &data.value,
+            );
+
+            if let Err(err) = self.send_plain_text(data).await {
+                error!(
+                    self.logger,
+                    "Failed sending to Bus";
+                    "reason" => format!("{:?}", err)
+                );
+            }
         }
     }
 }

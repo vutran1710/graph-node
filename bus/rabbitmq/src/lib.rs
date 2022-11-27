@@ -4,9 +4,7 @@ use graph::components::bus::BusError;
 use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
 use graph::prelude::Logger;
-use graph::tokio::sync::mpsc::unbounded_channel;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
-use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -15,31 +13,18 @@ pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
     connection: Arc<Mutex<Connection>>,
-    sender: UnboundedSender<BusMessage>,
-    receiver: Arc<Mutex<UnboundedReceiver<BusMessage>>>,
 }
 
 #[async_trait]
 impl Bus for RabbitmqBus {
     async fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
         let connection = Connection::insecure_open(&connection_uri).unwrap();
-        let (sender, receiver) = unbounded_channel();
 
         RabbitmqBus {
             name: String::from("my rabbit store"),
             connection: Arc::new(Mutex::new(connection)),
             logger,
-            sender,
-            receiver: Arc::new(Mutex::new(receiver)),
         }
-    }
-
-    fn mpsc_sender(&self) -> UnboundedSender<BusMessage> {
-        self.sender.clone()
-    }
-
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>> {
-        self.receiver.clone()
     }
 
     fn get_name(&self) -> &str {
@@ -77,4 +62,6 @@ impl Bus for RabbitmqBus {
             Err(e) => Err(BusError::SendPlainTextError(e.to_string())),
         };
     }
+
+    async fn start(&self, _r: UnboundedReceiver<BusMessage>) {}
 }

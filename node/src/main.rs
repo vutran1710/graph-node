@@ -415,35 +415,11 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
-        let bus_manager =
+        let (bus, bus_sender, bus_receiver) =
             BusInitializer::new(ENV_VARS.bus_url.clone().or(opt.bus_url), logger.clone()).await;
 
-        let bus_logger = logger.clone();
-        if let Some(bus) = bus_manager.clone() {
-            warn!(&bus_logger, "Starting new thread for Bus");
-            graph::spawn_thread("Bus-Thread", move || {
-                graph::block_on(async move {
-                    let r = bus.mpsc_receiver();
-                    let receiver = r.as_ref();
-                    warn!(&bus_logger, "Loop to consume data from bus");
-                    while let Some(data) = receiver.lock().unwrap().recv().await {
-                        warn!(
-                            bus_logger,
-                            "Sending to Bus";
-                            "subgraph_id" => &data.subgraph_id,
-                            "value" => &data.value,
-                        );
-
-                        if let Err(err) = bus.send_plain_text(data).await {
-                            error!(
-                                bus_logger,
-                                "Failed sending to Bus";
-                                "reason" => format!("{:?}", err)
-                            );
-                        }
-                    }
-                });
-            });
+        if bus.is_some() {
+            graph::spawn(async move { bus.unwrap().start(bus_receiver.unwrap()).await });
         };
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
@@ -455,7 +431,7 @@ async fn main() {
             link_resolver.clone(),
             ipfs_service,
             static_filters,
-            bus_manager.and_then(|b| Some(b.mpsc_sender())),
+            bus_sender,
         );
 
         // Create IPFS-based subgraph provider
