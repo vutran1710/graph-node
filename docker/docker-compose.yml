@@ -46,8 +46,3 @@ services:
       PGDATA: "/var/lib/postgresql/data"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
-  rabbitmq:
-    image: 'rabbitmq:management-alpine'
-    ports:
-      - 15672:15672
-      - 5672:5672
