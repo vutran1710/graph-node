@@ -2214,7 +2214,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "bollard",
- "bus-rabbitmq",
  "cid",
  "futures 0.3.25",
  "graph",
