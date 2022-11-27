@@ -10,7 +10,6 @@ use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-#[derive(Clone)]
 pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
@@ -21,7 +20,7 @@ pub struct RabbitmqBus {
 
 #[async_trait]
 impl Bus for RabbitmqBus {
-    fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
+    async fn new(connection_uri: String, logger: Logger) -> RabbitmqBus {
         let connection = Connection::insecure_open(&connection_uri).unwrap();
         let (sender, receiver) = unbounded_channel();
 
@@ -46,7 +45,11 @@ impl Bus for RabbitmqBus {
         self.name.as_str()
     }
 
-    fn send_plain_text(&self, text: String, deployment: DeploymentHash) -> Result<(), BusError> {
+    async fn send_plain_text(
+        &self,
+        text: String,
+        deployment: DeploymentHash,
+    ) -> Result<(), BusError> {
         // NOTE: this is very UGLY, but we are doing POC, so its ok for now
         let data_as_bytes = text.as_bytes();
         let routing_key = deployment.as_str();

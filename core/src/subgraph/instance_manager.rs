@@ -496,7 +496,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
                             "subgraph_id" => deployment.hash.clone().as_str()
                         );
 
-                        if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()) {
+                        if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()).await {
                             error!(
                                 bus_logger,
                                 "Failed sending to Bus";

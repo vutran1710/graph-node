@@ -9,11 +9,15 @@ use std::sync::Mutex;
 
 #[async_trait]
 pub trait Bus: Send + Sync + 'static {
-    fn new(connection_uri: String, logger: Logger) -> Self;
+    async fn new(connection_uri: String, logger: Logger) -> Self;
 
     fn get_name(&self) -> &str;
 
-    fn send_plain_text(&self, value: String, subgraph_id: DeploymentHash) -> Result<(), BusError>;
+    async fn send_plain_text(
+        &self,
+        value: String,
+        subgraph_id: DeploymentHash,
+    ) -> Result<(), BusError>;
 
     fn mpsc_sender(&self) -> UnboundedSender<String>;
 

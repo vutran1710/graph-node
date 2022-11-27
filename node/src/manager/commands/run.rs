@@ -147,7 +147,7 @@ pub async fn run(
     blockchain_map.insert(network_name.clone(), Arc::new(chain));
 
     let static_filters = ENV_VARS.experimental_static_filters;
-    let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone());
+    let bus = BusInitializer::new(ENV_VARS.bus_url.clone(), logger.clone()).await;
 
     let blockchain_map = Arc::new(blockchain_map);
     let subgraph_instance_manager = SubgraphInstanceManager::new(

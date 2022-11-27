@@ -29,7 +29,7 @@ impl BusInitializer {
         return scheme;
     }
 
-    pub fn new(uri: Option<String>, logger: graph::slog::Logger) -> Option<impl Bus> {
+    pub async fn new(uri: Option<String>, logger: graph::slog::Logger) -> Option<impl Bus> {
         match BusInitializer::get_bus_scheme(&uri) {
             // Some(BusScheme::RabbitMQ) => {
             //     warn!(logger, "Starting Bus of RabbitMQ";);
@@ -37,7 +37,8 @@ impl BusInitializer {
             // }
             Some(BusScheme::GooglePubSub) => {
                 warn!(logger, "Starting GooglePubSub";);
-                Some(GooglePubSub::new(uri.unwrap(), logger))
+                let bus = GooglePubSub::new(uri.unwrap(), logger).await;
+                Some(bus)
             }
             _ => {
                 warn!(logger, "No bus at work";);
