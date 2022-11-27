@@ -9,7 +9,7 @@ use graph::blockchain::block_stream::BlockStreamMetrics;
 use graph::blockchain::Blockchain;
 use graph::blockchain::NodeCapabilities;
 use graph::blockchain::{BlockchainKind, TriggerFilter};
-use graph::components::bus::Bus;
+use graph::components::bus::BusMessage;
 use graph::components::subgraph::ProofOfIndexingVersion;
 use graph::data::subgraph::{UnresolvedSubgraphManifest, SPEC_VERSION_0_0_6};
 use graph::data_source::causality_region::CausalityRegionSeq;
@@ -18,13 +18,13 @@ use graph::prelude::{SubgraphInstanceManager as SubgraphInstanceManagerTrait, *}
 use graph::{blockchain::BlockchainMap, components::store::DeploymentLocator};
 use graph_runtime_wasm::module::ToAscPtr;
 use graph_runtime_wasm::RuntimeHostBuilder;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::task;
 
 #[derive(Clone)]
-pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
+pub struct SubgraphInstanceManager<S: SubgraphStore> {
     logger_factory: LoggerFactory,
     subgraph_store: Arc<S>,
-    bus: Option<Arc<B>>,
     chains: Arc<BlockchainMap>,
     metrics_registry: Arc<dyn MetricsRegistry>,
     manager_metrics: Arc<SubgraphInstanceManagerMetrics>,
@@ -33,10 +33,11 @@ pub struct SubgraphInstanceManager<S: SubgraphStore, B: Bus> {
     ipfs_service: IpfsService,
     static_filters: bool,
     env_vars: Arc<EnvVars>,
+    bus_sender: Option<UnboundedSender<BusMessage>>,
 }
 
 #[async_trait]
-impl<S: SubgraphStore, B: Bus> SubgraphInstanceManagerTrait for SubgraphInstanceManager<S, B> {
+impl<S: SubgraphStore> SubgraphInstanceManagerTrait for SubgraphInstanceManager<S> {
     async fn start_subgraph(
         self: Arc<Self>,
         loc: DeploymentLocator,
@@ -161,17 +162,17 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManagerTrait for SubgraphInstance
     }
 }
 
-impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
+impl<S: SubgraphStore> SubgraphInstanceManager<S> {
     pub fn new(
         logger_factory: &LoggerFactory,
         env_vars: Arc<EnvVars>,
         subgraph_store: Arc<S>,
-        bus: Option<Arc<B>>,
         chains: Arc<BlockchainMap>,
         metrics_registry: Arc<dyn MetricsRegistry>,
         link_resolver: Arc<dyn LinkResolver>,
         ipfs_service: IpfsService,
         static_filters: bool,
+        bus_sender: Option<UnboundedSender<BusMessage>>,
     ) -> Self {
         let logger = logger_factory.component_logger("SubgraphInstanceManager", None);
         let logger_factory = logger_factory.with_parent(logger.clone());
@@ -189,7 +190,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             ipfs_service,
             static_filters,
             env_vars,
-            bus,
+            bus_sender,
         }
     }
 
@@ -380,7 +381,7 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             chain.runtime_adapter(),
             self.link_resolver.cheap_clone(),
             subgraph_store.ens_lookup(),
-            self.bus.clone().map(|b| b.mpsc_sender()),
+            self.bus_sender.clone(),
         );
 
         let features = manifest.features.clone();
@@ -469,8 +470,6 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
         // scheduling. It is also logical in terms of performance to run this with `unconstrained`,
         // it has a dedicated OS thread so the OS will handle the preemption. See
         // https://github.com/tokio-rs/tokio/issues/3493.
-        let bus_logger = logger.cheap_clone();
-
         graph::spawn_thread(deployment.to_string(), move || {
             if let Err(e) = graph::block_on(task::unconstrained(runner.run())) {
                 error!(
@@ -481,32 +480,6 @@ impl<S: SubgraphStore, B: Bus> SubgraphInstanceManager<S, B> {
             }
             subgraph_metrics_unregister.unregister(registry);
         });
-
-        if let Some(bus) = self.bus.clone() {
-            let thread_name = format!("{}::bus-service", deployment.to_string());
-            graph::spawn_thread(thread_name, move || {
-                graph::block_on(async move {
-                    let r = bus.mpsc_receiver();
-                    let receiver = r.as_ref();
-                    while let Some(data) = receiver.lock().unwrap().recv().await {
-                        warn!(
-                            bus_logger,
-                            "Sending to Bus";
-                            "value" => &data,
-                            "subgraph_id" => deployment.hash.clone().as_str()
-                        );
-
-                        if let Err(err) = bus.send_plain_text(data, deployment.hash.clone()).await {
-                            error!(
-                                bus_logger,
-                                "Failed sending to Bus";
-                                "reason" => format!("{:?}", err)
-                            );
-                        }
-                    }
-                });
-            });
-        };
 
         Ok(())
     }

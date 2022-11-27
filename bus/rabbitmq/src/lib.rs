@@ -1,8 +1,8 @@
 use amiquip::{Connection, ExchangeDeclareOptions, ExchangeType, Publish};
 use graph::components::bus::Bus;
 use graph::components::bus::BusError;
+use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
-use graph::prelude::DeploymentHash;
 use graph::prelude::Logger;
 use graph::tokio::sync::mpsc::unbounded_channel;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
@@ -10,12 +10,13 @@ use graph::tokio::sync::mpsc::UnboundedSender;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+#[derive(Clone)]
 pub struct RabbitmqBus {
     pub name: String,
     pub logger: Logger,
     connection: Arc<Mutex<Connection>>,
-    sender: UnboundedSender<String>,
-    receiver: Arc<Mutex<UnboundedReceiver<String>>>,
+    sender: UnboundedSender<BusMessage>,
+    receiver: Arc<Mutex<UnboundedReceiver<BusMessage>>>,
 }
 
 #[async_trait]
@@ -33,11 +34,11 @@ impl Bus for RabbitmqBus {
         }
     }
 
-    fn mpsc_sender(&self) -> UnboundedSender<String> {
+    fn mpsc_sender(&self) -> UnboundedSender<BusMessage> {
         self.sender.clone()
     }
 
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>> {
         self.receiver.clone()
     }
 
@@ -45,15 +46,11 @@ impl Bus for RabbitmqBus {
         self.name.as_str()
     }
 
-    async fn send_plain_text(
-        &self,
-        text: String,
-        deployment: DeploymentHash,
-    ) -> Result<(), BusError> {
+    async fn send_plain_text(&self, message: BusMessage) -> Result<(), BusError> {
         // NOTE: this is very UGLY, but we are doing POC, so its ok for now
-        let data_as_bytes = text.as_bytes();
-        let routing_key = deployment.as_str();
-        let exchange_name = deployment.as_str();
+        let data_as_bytes = message.value.as_bytes();
+        let routing_key = message.subgraph_id.as_str();
+        let exchange_name = message.subgraph_id.as_str();
         let mut exchange_opts = ExchangeDeclareOptions::default();
         exchange_opts.durable = true;
 

@@ -7,6 +7,7 @@ use futures03::channel::oneshot::channel;
 use tokio::sync::mpsc::UnboundedSender;
 
 use graph::blockchain::{Blockchain, HostFn, RuntimeAdapter};
+use graph::components::bus::BusMessage;
 use graph::components::store::{EnsLookup, SubgraphFork};
 use graph::components::subgraph::{MappingError, SharedProofOfIndexing};
 use graph::data_source::{
@@ -25,7 +26,7 @@ pub struct RuntimeHostBuilder<C: Blockchain> {
     runtime_adapter: Arc<dyn RuntimeAdapter<C>>,
     link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
-    bus_sender: Option<UnboundedSender<String>>,
+    bus_sender: Option<UnboundedSender<BusMessage>>,
 }
 
 impl<C: Blockchain> Clone for RuntimeHostBuilder<C> {
@@ -44,7 +45,7 @@ impl<C: Blockchain> RuntimeHostBuilder<C> {
         runtime_adapter: Arc<dyn RuntimeAdapter<C>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: Option<UnboundedSender<String>>,
+        bus_sender: Option<UnboundedSender<BusMessage>>,
     ) -> Self {
         RuntimeHostBuilder {
             runtime_adapter,
@@ -128,7 +129,7 @@ where
         mapping_request_sender: Sender<MappingRequest<C>>,
         metrics: Arc<HostMetrics>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: Option<UnboundedSender<String>>,
+        bus_sender: Option<UnboundedSender<BusMessage>>,
     ) -> Result<Self, Error> {
         // Create new instance of externally hosted functions invoker. The `Arc` is simply to avoid
         // implementing `Clone` for `HostExports`.

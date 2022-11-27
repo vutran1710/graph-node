@@ -9,6 +9,7 @@ use ethereum::{
 use git_testament::{git_testament, render_testament};
 use graph::blockchain::firehose_block_ingestor::FirehoseBlockIngestor;
 use graph::blockchain::{Block as BlockchainBlock, Blockchain, BlockchainKind, BlockchainMap};
+use graph::components::bus::Bus;
 use graph::components::store::BlockStore;
 use graph::data::graphql::effort::LoadManager;
 use graph::env::EnvVars;
@@ -414,19 +415,47 @@ async fn main() {
         }
         let static_filters = ENV_VARS.experimental_static_filters;
 
-        let bus =
+        let bus_manager =
             BusInitializer::new(ENV_VARS.bus_url.clone().or(opt.bus_url), logger.clone()).await;
+
+        let bus_logger = logger.clone();
+        if let Some(bus) = bus_manager.clone() {
+            warn!(&bus_logger, "Starting new thread for Bus");
+            graph::spawn_thread("Bus-Thread", move || {
+                graph::block_on(async move {
+                    let r = bus.mpsc_receiver();
+                    let receiver = r.as_ref();
+                    warn!(&bus_logger, "...Loop to consume data from bus");
+                    while let Some(data) = receiver.lock().unwrap().recv().await {
+                        warn!(
+                            bus_logger,
+                            "Sending to Bus";
+                            "subgraph_id" => &data.subgraph_id,
+                            "value" => &data.value,
+                        );
+
+                        if let Err(err) = bus.send_plain_text(data).await {
+                            error!(
+                                bus_logger,
+                                "Failed sending to Bus";
+                                "reason" => format!("{:?}", err)
+                            );
+                        }
+                    }
+                });
+            });
+        };
 
         let subgraph_instance_manager = SubgraphInstanceManager::new(
             &logger_factory,
             env_vars.cheap_clone(),
             network_store.subgraph_store(),
-            bus.and_then(|b| Some(Arc::new(b))),
             blockchain_map.cheap_clone(),
             metrics_registry.clone(),
             link_resolver.clone(),
             ipfs_service,
             static_filters,
+            bus_manager.and_then(|b| Some(b.mpsc_sender())),
         );
 
         // Create IPFS-based subgraph provider

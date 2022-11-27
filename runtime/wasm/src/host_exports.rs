@@ -4,6 +4,7 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use graph::blockchain::Blockchain;
+use graph::components::bus::BusMessage;
 use graph::components::store::EnsLookup;
 use graph::components::store::{EntityKey, EntityType};
 use graph::components::subgraph::{
@@ -73,7 +74,7 @@ pub struct HostExports<C: Blockchain> {
     templates: Arc<Vec<DataSourceTemplate<C>>>,
     pub(crate) link_resolver: Arc<dyn LinkResolver>,
     ens_lookup: Arc<dyn EnsLookup>,
-    bus_sender: Option<UnboundedSender<String>>,
+    bus_sender: Option<UnboundedSender<BusMessage>>,
 }
 
 impl<C: Blockchain> HostExports<C> {
@@ -84,7 +85,7 @@ impl<C: Blockchain> HostExports<C> {
         templates: Arc<Vec<DataSourceTemplate<C>>>,
         link_resolver: Arc<dyn LinkResolver>,
         ens_lookup: Arc<dyn EnsLookup>,
-        bus_sender: Option<UnboundedSender<String>>,
+        bus_sender: Option<UnboundedSender<BusMessage>>,
     ) -> Self {
         Self {
             subgraph_id,
@@ -240,7 +241,11 @@ impl<C: Blockchain> HostExports<C> {
     pub(crate) fn bus_send(&self, value: String, _gas: &GasCounter) -> Result<(), HostExportError> {
         // NOTE: Always OK because we dont want to interrupt/terminate the WasmRuntimeHost
         if let Some(sender) = &self.bus_sender {
-            let _send = sender.clone().send(value);
+            let msg = BusMessage {
+                value,
+                subgraph_id: self.subgraph_id.as_str().to_owned(),
+            };
+            let _send = sender.clone().send(msg);
         }
         Ok(())
     }

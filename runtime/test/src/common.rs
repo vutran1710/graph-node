@@ -1,4 +1,5 @@
 use ethabi::Contract;
+use graph::components::bus::BusMessage;
 use graph::components::store::DeploymentLocator;
 use graph::data::subgraph::*;
 use graph::data_source;
@@ -28,7 +29,7 @@ fn mock_host_exports(
     data_source: DataSource,
     store: Arc<impl SubgraphStore>,
     api_version: Version,
-    bus_sender: UnboundedSender<String>,
+    bus_sender: UnboundedSender<BusMessage>,
 ) -> HostExports<Chain> {
     let templates = vec![data_source::DataSourceTemplate::Onchain(
         DataSourceTemplate {
@@ -98,7 +99,7 @@ pub fn mock_context(
     data_source: DataSource,
     store: Arc<impl SubgraphStore>,
     api_version: Version,
-    bus_sender: UnboundedSender<String>,
+    bus_sender: UnboundedSender<BusMessage>,
 ) -> MappingContext<Chain> {
     MappingContext {
         logger: Logger::root(slog::Discard, o!()),

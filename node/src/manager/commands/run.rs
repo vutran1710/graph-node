@@ -16,6 +16,7 @@ use ethereum::{ProviderEthRpcMetrics, RuntimeAdapter as EthereumRuntimeAdapter};
 use graph::anyhow::{bail, format_err};
 use graph::blockchain::{BlockchainKind, BlockchainMap};
 use graph::cheap_clone::CheapClone;
+use graph::components::bus::Bus;
 use graph::components::store::{BlockStore as _, DeploymentLocator};
 use graph::env::EnvVars;
 use graph::firehose::FirehoseEndpoints;
@@ -154,12 +155,12 @@ pub async fn run(
         &logger_factory,
         env_vars.cheap_clone(),
         subgraph_store.clone(),
-        bus.and_then(|b| Some(Arc::new(b))),
         blockchain_map.clone(),
         metrics_registry.clone(),
         link_resolver.cheap_clone(),
         ipfs_service,
         static_filters,
+        bus.and_then(|b| Some(b.mpsc_sender())),
     );
 
     // Create IPFS-based subgraph provider

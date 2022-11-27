@@ -1,6 +1,7 @@
 use graph::components::bus::Bus;
 use graph::components::bus::BusError;
-use graph::prelude::DeploymentHash;
+use graph::components::bus::BusMessage;
+use graph::prelude::async_trait;
 use graph::prelude::Logger;
 use graph::tokio::sync::mpsc::unbounded_channel;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
@@ -11,12 +12,13 @@ use std::sync::Mutex;
 #[derive(Clone)]
 pub struct TestBus {
     name: String,
-    s: UnboundedSender<String>,
-    r: Arc<Mutex<UnboundedReceiver<String>>>,
+    s: UnboundedSender<BusMessage>,
+    r: Arc<Mutex<UnboundedReceiver<BusMessage>>>,
 }
 
+#[async_trait]
 impl Bus for TestBus {
-    fn new(_connection_uri: String, _logger: Logger) -> TestBus {
+    async fn new(_connection_uri: String, _logger: Logger) -> TestBus {
         let (s, r) = unbounded_channel();
         TestBus {
             name: "test-bus".to_owned(),
@@ -29,15 +31,15 @@ impl Bus for TestBus {
         self.name.as_str()
     }
 
-    fn mpsc_sender(&self) -> UnboundedSender<String> {
+    fn mpsc_sender(&self) -> UnboundedSender<BusMessage> {
         self.s.clone()
     }
 
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>> {
         self.r.clone()
     }
 
-    fn send_plain_text(&self, _text: String, _deployment: DeploymentHash) -> Result<(), BusError> {
+    async fn send_plain_text(&self, _msg: BusMessage) -> Result<(), BusError> {
         Ok(())
     }
 }

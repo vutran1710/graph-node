@@ -3,8 +3,8 @@ use google_cloud_pubsub::client::Client;
 use google_cloud_pubsub::client::ClientConfig;
 use graph::components::bus::Bus;
 use graph::components::bus::BusError;
+use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
-use graph::prelude::DeploymentHash;
 use graph::prelude::Logger;
 use graph::slog::warn;
 use graph::tokio::sync::mpsc::unbounded_channel;
@@ -16,20 +16,21 @@ use std::string::String;
 use std::sync::Arc;
 use std::sync::Mutex;
 
+#[derive(Clone)]
 pub struct GooglePubSub {
     project_id: String,
     topics: HashSet<String>,
-    sender: UnboundedSender<String>,
-    receiver: Arc<Mutex<UnboundedReceiver<String>>>,
+    sender: UnboundedSender<BusMessage>,
+    receiver: Arc<Mutex<UnboundedReceiver<BusMessage>>>,
     logger: Logger,
     client: Client,
 }
 
-fn pubsub_config_from_string(value: String) -> ClientConfig {
+fn pubsub_config_from_string(msg: String) -> ClientConfig {
     /* example connection string:
     pubsub://localhost:8080/PROJECT_ID?pool_size=10
      */
-    let url = Url::parse(&value).unwrap();
+    let url = Url::parse(&msg).unwrap();
     let mut result = ClientConfig::default();
     result.project_id = Some(url.path_segments().unwrap().next().unwrap().to_owned());
     result.endpoint = format!(
@@ -44,7 +45,7 @@ fn pubsub_config_from_string(value: String) -> ClientConfig {
 impl Bus for GooglePubSub {
     async fn new(connection_uri: String, logger: Logger) -> GooglePubSub {
         let config = pubsub_config_from_string(connection_uri);
-        warn!(logger, "PubSub Config"; "value" => format!("{:?}", config));
+        warn!(logger, "PubSub Config"; "msg" => format!("{:?}", config));
         let project_id = config.project_id.clone().unwrap();
         let client = Client::new(config).await.unwrap();
         let (sender, receiver) = unbounded_channel();
@@ -63,30 +64,27 @@ impl Bus for GooglePubSub {
         &self.project_id
     }
 
-    fn mpsc_sender(&self) -> UnboundedSender<String> {
+    fn mpsc_sender(&self) -> UnboundedSender<BusMessage> {
         self.sender.clone()
     }
 
-    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<String>>> {
+    fn mpsc_receiver(&self) -> Arc<Mutex<UnboundedReceiver<BusMessage>>> {
         self.receiver.clone()
     }
 
-    async fn send_plain_text(
-        &self,
-        value: String,
-        subgraph_id: DeploymentHash,
-    ) -> Result<(), BusError> {
+    async fn send_plain_text(&self, message: BusMessage) -> Result<(), BusError> {
         let result = async {
-            let topic_name = subgraph_id.as_str();
-            let topic = self.client.topic(topic_name);
+            let topic = self.client.topic(&message.subgraph_id);
 
             if !topic.exists(None, None).await.unwrap() {
                 topic.create(None, None, None).await.unwrap();
             }
 
+            warn!(self.logger, "Topic to send to"; "topic" => topic.fully_qualified_name());
+
             let publisher = topic.new_publisher(None);
             let mut msg = PubsubMessage::default();
-            msg.data = value.into();
+            msg.data = message.value.into();
             let awaiter = publisher.publish(msg).await;
             awaiter.get(None).await
         }

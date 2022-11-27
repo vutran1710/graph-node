@@ -108,14 +108,13 @@ pub struct TestContext {
     pub logger: Logger,
     pub provider: Arc<
         IpfsSubgraphAssignmentProvider<
-            SubgraphInstanceManager<graph_store_postgres::SubgraphStore, TestBus>,
+            SubgraphInstanceManager<graph_store_postgres::SubgraphStore>,
         >,
     >,
     pub store: Arc<SubgraphStore>,
     pub deployment: DeploymentLocator,
     pub subgraph_name: SubgraphName,
-    pub instance_manager:
-        SubgraphInstanceManager<graph_store_postgres::SubgraphStore, test_bus::TestBus>,
+    pub instance_manager: SubgraphInstanceManager<graph_store_postgres::SubgraphStore>,
     pub link_resolver: Arc<dyn graph::components::link_resolver::LinkResolver>,
     pub env_vars: Arc<EnvVars>,
     graphql_runner: Arc<GraphQlRunner<Store, PanicSubscriptionManager>>,
@@ -314,20 +313,17 @@ pub async fn setup<C: Blockchain>(
     );
 
     let blockchain_map = Arc::new(blockchain_map);
-    let bus = TestBus::new(
-        String::from("amqp://guest:guest@localhost:5672"),
-        logger.clone(),
-    );
+
     let subgraph_instance_manager = SubgraphInstanceManager::new(
         &logger_factory,
         env_vars.cheap_clone(),
         subgraph_store.clone(),
-        Some(Arc::new(bus)),
         blockchain_map.clone(),
         mock_registry.clone(),
         link_resolver.cheap_clone(),
         ipfs_service,
         static_filters,
+        None,
     );
 
     // Graphql runner
