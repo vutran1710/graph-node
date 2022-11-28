@@ -6,11 +6,12 @@ use graph::components::bus::Bus;
 use graph::components::bus::BusError;
 use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
+use graph::prelude::serde_json::to_string;
 use graph::prelude::Logger;
 use graph::slog::error;
 use graph::slog::warn;
 use graph::tokio::sync::mpsc::UnboundedReceiver;
-use schemas::{serialize_using_avro, Demo};
+use schemas::Demo;
 use serde::{Deserialize, Serialize};
 use std::string::String;
 
@@ -68,22 +69,19 @@ impl Bus for GooglePubSub {
 
         let publisher = topic.new_publisher(None);
         let mut msg = PubsubMessage::default();
-
-        let data: Vec<u8> = self.parse_data(message)?;
-        msg.data = data;
+        msg.data = self.parse_data(message)?;
 
         let awaiter = publisher.publish(msg).await;
 
         awaiter
             .get(None)
             .await
-            .map_err(|e| BusError::SendPlainTextError(e.to_string()))?;
+            .map_err(|e| BusError::SendSchemaMessageError(e.to_string()))?;
 
         Ok(())
     }
 
     async fn start(&self, mut receiver: UnboundedReceiver<BusMessage>) -> () {
-        warn!(&self.logger, "Loop to consume data from bus");
         while let Some(data) = receiver.recv().await {
             warn!(
                 self.logger,
@@ -110,10 +108,11 @@ impl GooglePubSub {
             "demo" => {
                 let event = message.data[0].to_owned();
                 let value = message.data[1]
-                    .parse::<i64>()
+                    .parse::<i32>()
                     .map_err(|e| BusError::BadMessage(e.to_string()))?;
                 let data = Demo { event, value };
-                serialize_using_avro(topic, data).map_err(|e| BusError::BadMessage(e))
+                let to_json = to_string::<Demo>(&data).unwrap();
+                Ok(to_json.into_bytes())
             }
             _ => Ok(message.data.concat().into_bytes()),
         }
