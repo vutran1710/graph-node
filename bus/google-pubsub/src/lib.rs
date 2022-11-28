@@ -20,10 +20,12 @@ pub struct GooglePubSub {
     client: Client,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct GraphNodeBusMessage {
-    data: String,
     topic: String,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    data: String,
 }
 
 #[async_trait]
@@ -41,6 +43,8 @@ impl Bus for GooglePubSub {
         let message = json_from_str::<GraphNodeBusMessage>(&bus_msg.value).map_err(|_| {
             BusError::BadMessage("Unable to convert to GraphNodeBusMessage".to_owned())
         })?;
+
+        warn!(self.logger, "Message received"; "msg" => format!("{:?}", message));
 
         let topic = self.client.topic(&message.topic);
 
