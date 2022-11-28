@@ -1,12 +1,11 @@
-use apache_avro::AvroSchema;
 use apache_avro::Schema;
 use apache_avro::Writer;
-use serde::Deserialize;
+use relative_path::RelativePath;
 use serde::Serialize;
 use std::env::current_dir;
 use std::fs;
 
-#[derive(AvroSchema, Deserialize, Serialize)]
+#[derive(Serialize)]
 pub struct Demo {
     pub event: String,
     pub value: i64,
@@ -14,9 +13,11 @@ pub struct Demo {
 
 fn load_topic_schema(topic: &str) -> Result<Schema, String> {
     let root = current_dir().expect("No dir found");
-    let file_full_path = root.join(format!("/avro/{}.json", topic));
-    let contents =
-        fs::read_to_string(file_full_path).expect("Should have been able to read the file");
+    let file_path = format!("bus/google-pubsub/src/avro/{}.json", topic);
+    let relative_path = RelativePath::new(&file_path);
+    let file_full_path = relative_path.to_logical_path(&root);
+    let panic_msg = format!("Schema file not found at: {:?}", file_full_path.to_str());
+    let contents = fs::read_to_string(file_full_path).expect(&panic_msg);
     let schema = Schema::parse_str(contents.as_str()).expect("Bad schema file");
     Ok(schema)
 }

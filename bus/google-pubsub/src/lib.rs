@@ -6,7 +6,6 @@ use graph::components::bus::Bus;
 use graph::components::bus::BusError;
 use graph::components::bus::BusMessage;
 use graph::prelude::async_trait;
-use graph::prelude::serde_json::from_str as json_from_str;
 use graph::prelude::Logger;
 use graph::slog::error;
 use graph::slog::warn;
@@ -23,9 +22,24 @@ pub struct GooglePubSub {
 #[derive(Serialize, Deserialize, Debug)]
 struct GraphNodeBusMessage {
     topic: String,
+    data: Vec<String>,
+}
 
-    #[serde(skip_serializing, skip_deserializing)]
-    data: String,
+impl TryFrom<BusMessage> for GraphNodeBusMessage {
+    type Error = BusError;
+    fn try_from(msg: BusMessage) -> Result<Self, Self::Error> {
+        let topic = msg
+            .value
+            .iter()
+            .nth(0)
+            .ok_or(BusError::BadMessage("No topic found".to_owned()))?
+            .to_owned();
+
+        let data = msg.value[1..].to_owned();
+
+        let result = GraphNodeBusMessage { topic, data };
+        Ok(result)
+    }
 }
 
 #[async_trait]
@@ -40,9 +54,7 @@ impl Bus for GooglePubSub {
     }
 
     async fn send_plain_text(&self, bus_msg: BusMessage) -> Result<(), BusError> {
-        let message = json_from_str::<GraphNodeBusMessage>(&bus_msg.value).map_err(|_| {
-            BusError::BadMessage("Unable to convert to GraphNodeBusMessage".to_owned())
-        })?;
+        let message = GraphNodeBusMessage::try_from(bus_msg)?;
 
         warn!(self.logger, "Message received"; "msg" => format!("{:?}", message));
 
@@ -77,7 +89,7 @@ impl Bus for GooglePubSub {
                 self.logger,
                 "Sending to Bus";
                 "subgraph_id" => &data.subgraph_id,
-                "value" => &data.value,
+                "value" => format!("{:?}", data.value),
             );
 
             if let Err(err) = self.send_plain_text(data).await {
@@ -96,10 +108,14 @@ impl GooglePubSub {
         let topic = message.topic.as_str();
         match topic {
             "demo" => {
-                let data: Demo = json_from_str(&message.data).unwrap();
+                let event = message.data[0].to_owned();
+                let value = message.data[1]
+                    .parse::<i64>()
+                    .map_err(|e| BusError::BadMessage(e.to_string()))?;
+                let data = Demo { event, value };
                 serialize_using_avro(topic, data).map_err(|e| BusError::BadMessage(e))
             }
-            _ => Ok(message.data.into_bytes()),
+            _ => Ok(message.data.concat().into_bytes()),
         }
     }
 }
