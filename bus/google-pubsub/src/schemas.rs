@@ -1,15 +1,9 @@
+use serde::Serialize;
 // use apache_avro::Schema;
 // use apache_avro::Writer;
 // use relative_path::RelativePath;
-use serde::Serialize;
 // use std::env::current_dir;
 // use std::fs;
-
-#[derive(Debug, Serialize)]
-pub struct Demo {
-    pub event: String,
-    pub value: i32,
-}
 
 // fn load_topic_schema(topic: &str) -> Result<Schema, String> {
 //     let root = current_dir().expect("No dir found");
@@ -29,3 +23,9 @@ pub struct Demo {
 //     let encoded = writer.into_inner().expect("Failed to encode");
 //     Ok(encoded)
 // }
+
+#[derive(Debug, Serialize)]
+pub struct Demo {
+    pub event: String,
+    pub value: i32,
+}
