@@ -27,6 +27,13 @@ const ANY_NAME: &str = ".*";
 /// A regular expression that matches nothing
 const NO_NAME: &str = ".^";
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum NodeFunctionalities {
+    Combined,
+    QueryOnly,
+    Indexer,
+}
+
 pub struct Opt {
     pub postgres_url: Option<String>,
     pub bus_url: Option<String>,
@@ -43,6 +50,7 @@ pub struct Opt {
     pub ethereum_ws: Vec<String>,
     pub ethereum_ipc: Vec<String>,
     pub unsafe_config: bool,
+    pub functionalities: NodeFunctionalities,
 }
 
 impl Default for Opt {
@@ -60,6 +68,7 @@ impl Default for Opt {
             ethereum_ipc: vec![],
             unsafe_config: false,
             bus_url: None,
+            functionalities: NodeFunctionalities::Combined,
         }
     }
 }
@@ -73,6 +82,7 @@ pub struct Config {
     pub stores: BTreeMap<String, Shard>,
     pub chains: ChainSection,
     pub deployment: Deployment,
+    pub functionalities: Option<NodeFunctionalities>,
 }
 
 fn validate_name(s: &str) -> Result<()> {
@@ -176,6 +186,7 @@ impl Config {
     }
 
     fn from_opt(opt: &Opt) -> Result<Config> {
+        let functionalities = opt.functionalities.clone();
         let deployment = Deployment::from_opt(opt);
         let mut stores = BTreeMap::new();
         let chains = ChainSection::from_opt(opt)?;
@@ -188,6 +199,7 @@ impl Config {
             stores,
             chains,
             deployment,
+            functionalities: Some(functionalities),
         })
     }
 
@@ -207,14 +219,23 @@ impl Config {
             .expect("a validated config has a primary store")
     }
 
-    pub fn query_only(&self, node: &NodeId) -> bool {
-        self.general
-            .as_ref()
-            .map(|g| match g.query.find(node.as_str()) {
-                None => false,
-                Some(m) => m.as_str() == node.as_str(),
-            })
-            .unwrap_or(false)
+    pub fn query_only(&self, _node: &NodeId) -> bool {
+        match self.functionalities {
+            Some(NodeFunctionalities::QueryOnly) => true,
+            _ => false,
+        }
+        /*
+        FIXME: we gonna have to deal with this later
+        once we start using `config.toml` for instance's configuration
+        */
+
+        // self.general
+        //     .as_ref()
+        //     .map(|g| match g.query.find(node.as_str()) {
+        //         None => false,
+        //         Some(m) => m.as_str() == node.as_str(),
+        //     })
+        //     .unwrap_or(false)
     }
 }
 
