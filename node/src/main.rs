@@ -143,10 +143,10 @@ async fn main() {
     let query_only = config.query_only(&node_id);
 
     warn!(
-        logger, "GRAPH_NODE_FUNCTIONALITIES";
-        "query-only" => query_only,
-        "disable-block-ingestor" => opt.disable_block_ingestor,
-        "functionalities" => opt.functionalities,
+        logger, "NODE_FUNCTIONALITIES";
+        "node_id" => node_id.clone(),
+        "query_only" => query_only.clone(),
+        "disable_block_ingestor" => opt.disable_block_ingestor.clone()
     );
 
     // Obtain subgraph related command-line arguments

@@ -231,15 +231,6 @@ pub struct Opt {
         help = "Bus service to send event from graph-node to"
     )]
     pub bus_url: Option<String>,
-
-    #[clap(
-        long,
-        value_name = "FUNCTIONALTIES",
-        default_value = "combined",
-        env = "NODE_FUNCTIONALITIES",
-        help = "Node dedicated functionalities"
-    )]
-    pub functionalities: String,
 }
 
 impl From<Opt> for config::Opt {
@@ -257,7 +248,6 @@ impl From<Opt> for config::Opt {
             ethereum_ipc,
             unsafe_config,
             bus_url,
-            functionalities,
             ..
         } = opt;
 
@@ -274,11 +264,6 @@ impl From<Opt> for config::Opt {
             ethereum_ipc,
             unsafe_config,
             bus_url,
-            functionalities: match &functionalities.as_str() {
-                &"query-only" => config::NodeFunctionalities::QueryOnly,
-                &"indexer" => config::NodeFunctionalities::Indexer,
-                _ => config::NodeFunctionalities::Combined,
-            },
         }
     }
 }

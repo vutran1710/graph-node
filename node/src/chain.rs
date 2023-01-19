@@ -487,7 +487,6 @@ mod test {
             ethereum_ipc: vec![],
             unsafe_config: false,
             bus_url: Some("not needed".to_string()),
-            functionalities: crate::config::NodeFunctionalities::Combined,
         };
 
         let config = Config::load(&logger, &opt).expect("can create config");
