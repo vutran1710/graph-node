@@ -141,13 +141,13 @@ async fn main() {
 
     let node_id = NodeId::new(opt.node_id.clone())
         .expect("Node ID must be between 1 and 63 characters in length");
-    let query_only = config.query_only(&node_id);
+    let query_only = config.query_only(&node_id) || opt.disable_block_ingestor;
 
     warn!(
         logger, "NODE_FUNCTIONALITIES";
         "node_id" => node_id.clone(),
-        "query_only" => query_only.clone(),
-        "disable_block_ingestor" => opt.disable_block_ingestor.clone()
+        "indexing?" => if query_only.clone() { "no" } else { "yes" },
+        "query?" => "yes",
     );
 
     // Obtain subgraph related command-line arguments
@@ -498,12 +498,15 @@ async fn main() {
             node_id.clone(),
             version_switching_mode,
         ));
-        graph::spawn(
-            subgraph_registrar
-                .start()
-                .map_err(|e| panic!("failed to initialize subgraph provider {}", e))
-                .compat(),
-        );
+
+        if !query_only {
+            graph::spawn(
+                subgraph_registrar
+                    .start()
+                    .map_err(|e| panic!("failed to initialize subgraph provider {}", e))
+                    .compat(),
+            );
+        }
 
         // Start admin JSON-RPC server.
         let json_rpc_server = JsonRpcServer::serve(
