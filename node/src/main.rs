@@ -148,6 +148,7 @@ async fn main() {
         "node_id" => node_id.clone(),
         "query?" => !opt.disable_query_server.clone(),
         "indexing?" => !query_only.clone(),
+        "metrics?" => !opt.disable_metrics_server.clone(),
     );
 
     if query_only && opt.disable_query_server {
@@ -598,12 +599,14 @@ async fn main() {
                 .compat(),
         );
 
-        graph::spawn(async move {
-            metrics_server
-                .serve(metrics_port)
-                .await
-                .expect("Failed to start metrics server")
-        });
+        if !opt.disable_metrics_server {
+            graph::spawn(async move {
+                metrics_server
+                    .serve(metrics_port)
+                    .await
+                    .expect("Failed to start metrics server")
+            });
+        }
     };
 
     graph::spawn(launch_services(logger.clone(), env_vars.cheap_clone()));
