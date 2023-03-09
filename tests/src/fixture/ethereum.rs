@@ -8,7 +8,7 @@ use super::{
 };
 use graph::blockchain::{BlockPtr, TriggersAdapterSelector};
 use graph::cheap_clone::CheapClone;
-use graph::firehose::{FirehoseEndpoint, FirehoseEndpoints};
+use graph::firehose::{FirehoseEndpoint, FirehoseEndpoints, SubgraphLimit};
 use graph::prelude::ethabi::ethereum_types::H256;
 use graph::prelude::web3::types::{Address, Log, Transaction, H160};
 use graph::prelude::{ethabi, tiny_keccak, LightEthereumBlock, LoggerFactory, NodeId};
@@ -31,9 +31,9 @@ pub async fn chain(
         x: PhantomData,
     }));
     let logger = graph::log::logger(true);
-    let logger_factory = LoggerFactory::new(logger.cheap_clone(), None);
-    let node_id = NodeId::new(NODE_ID).unwrap();
     let mock_registry = Arc::new(MockMetricsRegistry::new());
+    let logger_factory = LoggerFactory::new(logger.cheap_clone(), None, mock_registry.clone());
+    let node_id = NodeId::new(NODE_ID).unwrap();
 
     let chain_store = stores.chain_store.cheap_clone();
 
@@ -45,6 +45,7 @@ pub async fn chain(
         None,
         true,
         false,
+        SubgraphLimit::Unlimited,
     ))]
     .into();
 
@@ -59,7 +60,10 @@ pub async fn chain(
         chain_store.cheap_clone(),
         chain_store,
         firehose_endpoints,
-        EthereumNetworkAdapters { adapters: vec![] },
+        EthereumNetworkAdapters {
+            adapters: vec![],
+            call_only_adapters: vec![],
+        },
         stores.chain_head_listener.cheap_clone(),
         block_stream_builder.clone(),
         Arc::new(StaticBlockRefetcher { x: PhantomData }),
