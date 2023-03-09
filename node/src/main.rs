@@ -143,12 +143,17 @@ async fn main() {
         .expect("Node ID must be between 1 and 63 characters in length");
     let query_only = config.query_only(&node_id) || opt.disable_block_ingestor;
 
-    warn!(
+    info!(
         logger, "NODE_FUNCTIONALITIES";
         "node_id" => node_id.clone(),
-        "indexing?" => if query_only.clone() { "no" } else { "yes" },
-        "query?" => "yes",
+        "query?" => !opt.disable_query_server.clone(),
+        "indexing?" => !query_only.clone(),
     );
+
+    if query_only && opt.disable_query_server {
+        eprintln!("Graph-node instance is probably misconfigured since it is not allowed to either QUERY or INDEXING!");
+        std::process::exit(1);
+    }
 
     // Obtain subgraph related command-line arguments
     let subgraph = opt.subgraph.clone();
@@ -572,16 +577,18 @@ async fn main() {
             );
         }
 
-        // Serve GraphQL queries over HTTP
-        graph::spawn(
-            graphql_server
-                .serve(http_port, ws_port)
-                .expect("Failed to start GraphQL query server")
-                .compat(),
-        );
+        if !opt.disable_query_server {
+            // Serve GraphQL queries over HTTP
+            graph::spawn(
+                graphql_server
+                    .serve(http_port, ws_port)
+                    .expect("Failed to start GraphQL query server")
+                    .compat(),
+            );
 
-        // Serve GraphQL subscriptions over WebSockets
-        graph::spawn(subscription_server.serve(ws_port));
+            // Serve GraphQL subscriptions over WebSockets
+            graph::spawn(subscription_server.serve(ws_port));
+        }
 
         // Run the index node server
         graph::spawn(
