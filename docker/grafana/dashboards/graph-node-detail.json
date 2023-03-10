@@ -23,10 +23,9 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": 1,
+  "graphTooltip": 1,
   "links": [],
-  "liveNow": false,
+  "liveNow": true,
   "panels": [
     {
       "datasource": {
@@ -690,7 +689,7 @@
     "list": [
       {
         "current": {
-          "selected": true,
+          "selected": false,
           "text": "QmUGTBpna7c9dwMeWwSfazu2bVV9UDGZSbdHxha3CCuzk4",
           "value": "QmUGTBpna7c9dwMeWwSfazu2bVV9UDGZSbdHxha3CCuzk4"
         },
@@ -725,6 +724,6 @@
   "timezone": "",
   "title": "Graphnode Details",
   "uid": "Gy0zjS-Vk",
-  "version": 10,
+  "version": 1,
   "weekStart": ""
 }
