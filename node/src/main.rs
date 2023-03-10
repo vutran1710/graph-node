@@ -141,14 +141,20 @@ async fn main() {
 
     let node_id = NodeId::new(opt.node_id.clone())
         .expect("Node ID must be between 1 and 63 characters in length");
-    let query_only = config.query_only(&node_id);
+    let query_only = config.query_only(&node_id) || opt.disable_block_ingestor;
 
-    warn!(
+    info!(
         logger, "NODE_FUNCTIONALITIES";
         "node_id" => node_id.clone(),
-        "query_only" => query_only.clone(),
-        "disable_block_ingestor" => opt.disable_block_ingestor.clone()
+        "query?" => !opt.disable_query_server.clone(),
+        "indexing?" => !query_only.clone(),
+        "metrics?" => !opt.disable_metrics_server.clone(),
     );
+
+    if query_only && opt.disable_query_server {
+        eprintln!("Graph-node instance is probably misconfigured since it is not allowed to either QUERY or INDEXING!");
+        std::process::exit(1);
+    }
 
     // Obtain subgraph related command-line arguments
     let subgraph = opt.subgraph.clone();
@@ -498,12 +504,15 @@ async fn main() {
             node_id.clone(),
             version_switching_mode,
         ));
-        graph::spawn(
-            subgraph_registrar
-                .start()
-                .map_err(|e| panic!("failed to initialize subgraph provider {}", e))
-                .compat(),
-        );
+
+        if !query_only {
+            graph::spawn(
+                subgraph_registrar
+                    .start()
+                    .map_err(|e| panic!("failed to initialize subgraph provider {}", e))
+                    .compat(),
+            );
+        }
 
         // Start admin JSON-RPC server.
         let json_rpc_server = JsonRpcServer::serve(
@@ -569,16 +578,18 @@ async fn main() {
             );
         }
 
-        // Serve GraphQL queries over HTTP
-        graph::spawn(
-            graphql_server
-                .serve(http_port, ws_port)
-                .expect("Failed to start GraphQL query server")
-                .compat(),
-        );
+        if !opt.disable_query_server {
+            // Serve GraphQL queries over HTTP
+            graph::spawn(
+                graphql_server
+                    .serve(http_port, ws_port)
+                    .expect("Failed to start GraphQL query server")
+                    .compat(),
+            );
 
-        // Serve GraphQL subscriptions over WebSockets
-        graph::spawn(subscription_server.serve(ws_port));
+            // Serve GraphQL subscriptions over WebSockets
+            graph::spawn(subscription_server.serve(ws_port));
+        }
 
         // Run the index node server
         graph::spawn(
@@ -588,12 +599,14 @@ async fn main() {
                 .compat(),
         );
 
-        graph::spawn(async move {
-            metrics_server
-                .serve(metrics_port)
-                .await
-                .expect("Failed to start metrics server")
-        });
+        if !opt.disable_metrics_server {
+            graph::spawn(async move {
+                metrics_server
+                    .serve(metrics_port)
+                    .await
+                    .expect("Failed to start metrics server")
+            });
+        }
     };
 
     graph::spawn(launch_services(logger.clone(), env_vars.cheap_clone()));

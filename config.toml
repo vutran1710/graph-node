@@ -1,0 +1,28 @@
+[general]
+query = "query_.*"
+
+[chains]
+ingestor = "indexer_.*"
+[chains.optimism]
+shard = "primary"
+provider = [
+  { label = "optimism", url = "https://mainnet.optimism.io", features = ["archive"] },
+]
+
+[store]
+[store.primary]
+connection = "postgresql://graph-node:let-me-in@localhost:5432/graph-node"
+pool_size = 20
+
+[deployment]
+[[deployment.rule]]
+match = { name = "shard_01/.*" }
+shard = "primary"
+indexers = [ "indexer_01" ]
+[[deployment.rule]]
+match = { name = "shard_02/.*" }
+shard = "primary"
+indexers = [ "indexer_02" ]
+[[deployment.rule]]
+shards = ["primary"]
+indexers = [ "default" ]
