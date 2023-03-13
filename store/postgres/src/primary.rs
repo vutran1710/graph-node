@@ -1070,6 +1070,7 @@ impl<'a> Connection<'a> {
         let schemas: Vec<(DeploymentId, String)> = diesel::insert_into(ds::table)
             .values((
                 ds::subgraph.eq(deployment.as_str()),
+                ds::subgraph_name.eq(subgraph_name.clone()),
                 ds::shard.eq(shard.as_str()),
                 ds::version.eq(schema_version as i32),
                 ds::network.eq(network.as_str()),
