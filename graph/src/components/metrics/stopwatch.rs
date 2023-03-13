@@ -43,7 +43,7 @@ impl CheapClone for StopwatchMetrics {}
 impl StopwatchMetrics {
     pub fn new(
         logger: Logger,
-        subgraph_id: DeploymentHash,
+        subgraph_name: String,
         stage: &str,
         registry: Arc<dyn MetricsRegistry>,
     ) -> Self {
@@ -53,13 +53,13 @@ impl StopwatchMetrics {
                 .global_deployment_counter_vec(
                     "deployment_sync_secs",
                     "total time spent syncing",
-                    subgraph_id.as_str(),
+                    subgraph_name.as_str(),
                     &["section", "stage"],
                 )
                 .unwrap_or_else(|_| {
                     panic!(
                         "failed to register subgraph_sync_total_secs prometheus counter for {}",
-                        subgraph_id
+                        subgraph_name
                     )
                 }),
             logger,

@@ -911,6 +911,15 @@ impl DeploymentLocator {
     pub fn new(id: DeploymentId, hash: DeploymentHash, name: Option<String>) -> Self {
         Self { id, hash, name }
     }
+
+    pub fn readable_name(&self) -> String {
+        match self.name {
+            Some(ref subgraph_name) => {
+                format!("{} ({})", self.hash.to_string(), subgraph_name)
+            }
+            None => self.hash.to_string(),
+        }
+    }
 }
 
 impl Display for DeploymentLocator {
