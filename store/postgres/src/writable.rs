@@ -628,12 +628,12 @@ impl Queue {
         // Use a separate instance of the `StopwatchMetrics` for background
         // work since that has its own call hierarchy, and using the
         // foreground metrics will lead to incorrect nesting of sections
-        let stopwatch = StopwatchMetrics::new(
-            logger.clone(),
-            store.site.deployment.clone(),
-            "writer",
-            registry,
-        );
+        let name = match store.site.subgraph_name.clone() {
+            Some(name) => format!("{} ({})", store.site.deployment.to_string(), name),
+            None => store.site.deployment.to_string(),
+        };
+
+        let stopwatch = StopwatchMetrics::new(logger.clone(), name, "writer", registry);
 
         let queue = Self {
             store,

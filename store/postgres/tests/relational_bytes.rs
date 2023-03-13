@@ -76,7 +76,7 @@ lazy_static! {
     static ref THING: EntityType = EntityType::from("Thing");
     static ref MOCK_STOPWATCH: StopwatchMetrics = StopwatchMetrics::new(
         Logger::root(slog::Discard, o!()),
-        THINGS_SUBGRAPH_ID.clone(),
+        THINGS_SUBGRAPH_ID.clone().to_string(),
         "test",
         Arc::new(MockMetricsRegistry::new()),
     );
