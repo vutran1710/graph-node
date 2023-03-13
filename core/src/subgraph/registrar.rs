@@ -273,9 +273,11 @@ where
         // We don't have a location for the subgraph yet; that will be
         // assigned when we deploy for real. For logging purposes, make up a
         // fake locator
-        let logger = self
-            .logger_factory
-            .subgraph_logger(&DeploymentLocator::new(DeploymentId(0), hash.clone()));
+        let logger = self.logger_factory.subgraph_logger(&DeploymentLocator::new(
+            DeploymentId(0),
+            hash.clone(),
+            Some(name.clone().to_string()),
+        ));
 
         let raw: serde_yaml::Mapping = {
             let file_bytes = self

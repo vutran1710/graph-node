@@ -891,6 +891,7 @@ impl DeploymentId {
 pub struct DeploymentLocator {
     pub id: DeploymentId,
     pub hash: DeploymentHash,
+    pub name: Option<String>,
 }
 
 impl CheapClone for DeploymentLocator {}
@@ -907,8 +908,8 @@ impl slog::Value for DeploymentLocator {
 }
 
 impl DeploymentLocator {
-    pub fn new(id: DeploymentId, hash: DeploymentHash) -> Self {
-        Self { id, hash }
+    pub fn new(id: DeploymentId, hash: DeploymentHash, name: Option<String>) -> Self {
+        Self { id, hash, name }
     }
 }
 

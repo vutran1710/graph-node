@@ -120,6 +120,7 @@ table! {
         id -> Integer,
         created_at -> Timestamptz,
         subgraph -> Text,
+        subgraph_name -> Nullable<Text>,
         name -> Text,
         shard -> Text,
         /// The subgraph layout scheme used for this subgraph
@@ -187,6 +188,7 @@ struct Schema {
     #[allow(dead_code)]
     pub created_at: PgTimestamp,
     pub subgraph: String,
+    pub subgraph_name: Option<String>,
     pub name: String,
     pub shard: String,
     version: i32,
@@ -327,6 +329,8 @@ pub struct Site {
     /// The subgraph deployment
     pub deployment: DeploymentHash,
     /// The name of the database shard
+    pub subgraph_name: Option<String>,
+    /// The name of the subgraph
     pub shard: Shard,
     /// The database namespace (schema) that holds the data for the deployment
     pub namespace: Namespace,
@@ -357,9 +361,11 @@ impl TryFrom<Schema> for Site {
         })?;
         let shard = Shard::new(schema.shard)?;
         let schema_version = DeploymentSchemaVersion::try_from(schema.version)?;
+        let subgraph_name = schema.subgraph_name;
         Ok(Self {
             id: schema.id,
             deployment,
+            subgraph_name,
             namespace,
             shard,
             network: schema.network,
@@ -372,7 +378,11 @@ impl TryFrom<Schema> for Site {
 
 impl From<&Site> for DeploymentLocator {
     fn from(site: &Site) -> Self {
-        DeploymentLocator::new(site.id.into(), site.deployment.clone())
+        DeploymentLocator::new(
+            site.id.into(),
+            site.deployment.clone(),
+            site.subgraph_name.clone(),
+        )
     }
 }
 
@@ -383,6 +393,7 @@ pub fn make_dummy_site(deployment: DeploymentHash, namespace: Namespace, network
     Site {
         id: DeploymentId(-7),
         deployment,
+        subgraph_name: None,
         shard: PRIMARY_SHARD.clone(),
         namespace,
         network,
@@ -743,7 +754,7 @@ impl<'a> Connection<'a> {
                 DeploymentHash::new(hash)
                     .map(|hash| {
                         EntityChange::for_assignment(
-                            DeploymentLocator::new(id.into(), hash),
+                            DeploymentLocator::new(id.into(), hash, None),
                             EntityChangeOperation::Removed,
                         )
                     })
@@ -1047,6 +1058,7 @@ impl<'a> Connection<'a> {
         &self,
         shard: Shard,
         deployment: DeploymentHash,
+        subgraph_name: Option<String>,
         network: String,
         schema_version: DeploymentSchemaVersion,
         active: bool,
@@ -1076,6 +1088,7 @@ impl<'a> Connection<'a> {
         Ok(Site {
             id,
             deployment,
+            subgraph_name,
             shard,
             namespace,
             network,
@@ -1090,6 +1103,7 @@ impl<'a> Connection<'a> {
         &self,
         shard: Shard,
         subgraph: &DeploymentHash,
+        subgraph_name: Option<String>,
         network: String,
         schema_version: DeploymentSchemaVersion,
     ) -> Result<Site, StoreError> {
@@ -1097,7 +1111,14 @@ impl<'a> Connection<'a> {
             return Ok(site);
         }
 
-        self.create_site(shard, subgraph.clone(), network, schema_version, true)
+        self.create_site(
+            shard,
+            subgraph.clone(),
+            subgraph_name,
+            network,
+            schema_version,
+            true,
+        )
     }
 
     pub fn assigned_node(&self, site: &Site) -> Result<Option<NodeId>, StoreError> {
@@ -1117,6 +1138,7 @@ impl<'a> Connection<'a> {
         self.create_site(
             shard,
             src.deployment.clone(),
+            src.subgraph_name.clone(),
             src.network.clone(),
             src.schema_version,
             false,

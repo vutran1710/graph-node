@@ -181,6 +181,7 @@ impl Deployment {
         DeploymentLocator::new(
             DeploymentId(self.id),
             DeploymentHash::new(self.deployment.clone()).unwrap(),
+            Some(self.name.clone()),
         )
     }
 
