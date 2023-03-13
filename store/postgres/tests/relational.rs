@@ -195,7 +195,7 @@ lazy_static! {
     static ref NULLABLE_STRINGS: EntityType = EntityType::from("NullableStrings");
     static ref MOCK_STOPWATCH: StopwatchMetrics = StopwatchMetrics::new(
         Logger::root(slog::Discard, o!()),
-        THINGS_SUBGRAPH_ID.clone(),
+        THINGS_SUBGRAPH_ID.clone().to_string(),
         "test",
         Arc::new(MockMetricsRegistry::new()),
     );
