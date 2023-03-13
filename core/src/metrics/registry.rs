@@ -95,7 +95,7 @@ impl MetricsRegistry {
         let opts = match deployment {
             None => opts,
             Some(deployment) => opts
-                .const_label("deployment", deployment.id.to_string())
+                .const_label("deployment", deployment.hash.to_string())
                 .const_label("name", deployment.name.clone().unwrap_or_default()),
         };
         let counters = CounterVec::new(opts, variable_labels)?;
