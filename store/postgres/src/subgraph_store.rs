@@ -397,7 +397,9 @@ impl SubgraphStoreInner {
             .find_site_by_ref(id)?
             .ok_or_else(|| StoreError::DeploymentNotFound(id.to_string()))?;
         let site = Arc::new(site);
-
+        // NOTE: we check if deployment_schemas does not have subgraph_name for this subgraph
+        // if it does, we try to load from the namepsace and update the missing name
+        self.mirror.fill_missing_subgraph_name(&site.deployment)?;
         self.cache_active(&site);
         Ok(site)
     }

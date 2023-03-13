@@ -679,6 +679,30 @@ mod queries {
                 .get_results(conn)
                 .map_err(Into::into)
     }
+
+    pub(super) fn fill_missing_subgraph_name(
+        conn: &PgConnection,
+        subgraph: &DeploymentHash,
+    ) -> Result<(), StoreError> {
+        let row = ds::table
+            .filter(ds::subgraph.eq(subgraph.to_string()))
+            .select(ds::all_columns)
+            .first::<Schema>(conn)
+            .optional()?;
+
+        if row.is_none() {
+            return Ok(());
+        }
+
+        let row = row.unwrap();
+        let names_and_versions = subgraphs_by_deployment_hash(conn, &row.subgraph)?;
+        let subgraph_name = &names_and_versions[0].0;
+
+        diesel::update(ds::table)
+            .set(ds::subgraph_name.eq(subgraph_name))
+            .execute(conn)
+            .map(|_| Ok(()))?
+    }
 }
 
 /// A wrapper for a database connection that provides access to functionality
@@ -1803,5 +1827,9 @@ impl Mirror {
         shard: &Shard,
     ) -> Result<Option<Site>, StoreError> {
         self.read(|conn| queries::find_site_in_shard(conn, subgraph, shard))
+    }
+
+    pub fn fill_missing_subgraph_name(&self, subgraph: &DeploymentHash) -> Result<(), StoreError> {
+        self.read(|conn| queries::fill_missing_subgraph_name(conn, subgraph))
     }
 }
