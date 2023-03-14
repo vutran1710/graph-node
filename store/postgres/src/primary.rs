@@ -684,8 +684,9 @@ mod queries {
         conn: &PgConnection,
         subgraph: &DeploymentHash,
     ) -> Result<(), StoreError> {
+        let hash = subgraph.to_string();
         let row = ds::table
-            .filter(ds::subgraph.eq(subgraph.to_string()))
+            .filter(ds::subgraph.eq(hash.clone()))
             .select(ds::all_columns)
             .first::<Schema>(conn)
             .optional()?;
@@ -699,7 +700,7 @@ mod queries {
 
         if names_and_versions.len() > 0 {
             let subgraph_name = &names_and_versions[0].0;
-            return diesel::update(ds::table)
+            return diesel::update(ds::table.filter(ds::subgraph.eq(hash)))
                 .set(ds::subgraph_name.eq(subgraph_name))
                 .execute(conn)
                 .map(|_| Ok(()))?;
