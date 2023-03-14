@@ -20,7 +20,7 @@ use graph::{
 lazy_static! {
     static ref SUBGRAPH_ID: DeploymentHash = DeploymentHash::new("entity_cache").unwrap();
     static ref DEPLOYMENT: DeploymentLocator =
-        DeploymentLocator::new(DeploymentId::new(-12), SUBGRAPH_ID.clone());
+        DeploymentLocator::new(DeploymentId::new(-12), SUBGRAPH_ID.clone(), None);
     static ref SCHEMA: Arc<Schema> = Arc::new(
         Schema::parse(
             "

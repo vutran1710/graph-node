@@ -203,6 +203,20 @@ pub struct Opt {
     pub disable_block_ingestor: bool,
     #[clap(
         long,
+        value_name = "DISABLE_QUERY_SERVER",
+        env = "DISABLE_QUERY_SERVER",
+        help = "Disable GraphQL server (http & ws)"
+    )]
+    pub disable_query_server: bool,
+    #[clap(
+        long,
+        value_name = "DISABLE_METRICS_SERVER",
+        env = "DISABLE_METRICS_SERVER",
+        help = "Disable metrics server"
+    )]
+    pub disable_metrics_server: bool,
+    #[clap(
+        long,
         value_name = "STORE_CONNECTION_POOL_SIZE",
         default_value = "10",
         env = "STORE_CONNECTION_POOL_SIZE",

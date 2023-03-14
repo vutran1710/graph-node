@@ -120,6 +120,7 @@ table! {
         id -> Integer,
         created_at -> Timestamptz,
         subgraph -> Text,
+        subgraph_name -> Nullable<Text>,
         name -> Text,
         shard -> Text,
         /// The subgraph layout scheme used for this subgraph
@@ -187,6 +188,7 @@ struct Schema {
     #[allow(dead_code)]
     pub created_at: PgTimestamp,
     pub subgraph: String,
+    pub subgraph_name: Option<String>,
     pub name: String,
     pub shard: String,
     version: i32,
@@ -327,6 +329,8 @@ pub struct Site {
     /// The subgraph deployment
     pub deployment: DeploymentHash,
     /// The name of the database shard
+    pub subgraph_name: Option<String>,
+    /// The name of the subgraph
     pub shard: Shard,
     /// The database namespace (schema) that holds the data for the deployment
     pub namespace: Namespace,
@@ -357,9 +361,11 @@ impl TryFrom<Schema> for Site {
         })?;
         let shard = Shard::new(schema.shard)?;
         let schema_version = DeploymentSchemaVersion::try_from(schema.version)?;
+        let subgraph_name = schema.subgraph_name;
         Ok(Self {
             id: schema.id,
             deployment,
+            subgraph_name,
             namespace,
             shard,
             network: schema.network,
@@ -372,7 +378,11 @@ impl TryFrom<Schema> for Site {
 
 impl From<&Site> for DeploymentLocator {
     fn from(site: &Site) -> Self {
-        DeploymentLocator::new(site.id.into(), site.deployment.clone())
+        DeploymentLocator::new(
+            site.id.into(),
+            site.deployment.clone(),
+            site.subgraph_name.clone(),
+        )
     }
 }
 
@@ -383,6 +393,7 @@ pub fn make_dummy_site(deployment: DeploymentHash, namespace: Namespace, network
     Site {
         id: DeploymentId(-7),
         deployment,
+        subgraph_name: None,
         shard: PRIMARY_SHARD.clone(),
         namespace,
         network,
@@ -668,6 +679,34 @@ mod queries {
                 .get_results(conn)
                 .map_err(Into::into)
     }
+
+    pub(super) fn fill_missing_subgraph_name(
+        conn: &PgConnection,
+        subgraph: &DeploymentHash,
+    ) -> Result<(), StoreError> {
+        let row = ds::table
+            .filter(ds::subgraph.eq(subgraph.to_string()))
+            .select(ds::all_columns)
+            .first::<Schema>(conn)
+            .optional()?;
+
+        if row.is_none() {
+            return Ok(());
+        }
+
+        let row = row.unwrap();
+        let names_and_versions = subgraphs_by_deployment_hash(conn, &row.subgraph)?;
+
+        if names_and_versions.len() > 0 {
+            let subgraph_name = &names_and_versions[0].0;
+            return diesel::update(ds::table)
+                .set(ds::subgraph_name.eq(subgraph_name))
+                .execute(conn)
+                .map(|_| Ok(()))?;
+        }
+
+        Ok(())
+    }
 }
 
 /// A wrapper for a database connection that provides access to functionality
@@ -728,22 +767,22 @@ impl<'a> Connection<'a> {
 
         let removed: Vec<_> = ds::table
             .filter(ds::id.eq_any(removed))
-            .select((ds::id, ds::subgraph))
-            .load::<(DeploymentId, String)>(self.conn.as_ref())?
+            .select((ds::id, ds::subgraph, ds::subgraph_name))
+            .load::<(DeploymentId, String, Option<String>)>(self.conn.as_ref())?
             .into_iter()
             .collect();
 
         // Stop ongoing copies
-        let removed_ids: Vec<_> = removed.iter().map(|(id, _)| *id).collect();
+        let removed_ids: Vec<_> = removed.iter().map(|(id, _, _)| *id).collect();
         self.cancel_copies(removed_ids)?;
 
         let events = removed
             .into_iter()
-            .map(|(id, hash)| {
+            .map(|(id, hash, subgraph_name)| {
                 DeploymentHash::new(hash)
                     .map(|hash| {
                         EntityChange::for_assignment(
-                            DeploymentLocator::new(id.into(), hash),
+                            DeploymentLocator::new(id.into(), hash, subgraph_name),
                             EntityChangeOperation::Removed,
                         )
                     })
@@ -1047,6 +1086,7 @@ impl<'a> Connection<'a> {
         &self,
         shard: Shard,
         deployment: DeploymentHash,
+        subgraph_name: Option<String>,
         network: String,
         schema_version: DeploymentSchemaVersion,
         active: bool,
@@ -1058,6 +1098,7 @@ impl<'a> Connection<'a> {
         let schemas: Vec<(DeploymentId, String)> = diesel::insert_into(ds::table)
             .values((
                 ds::subgraph.eq(deployment.as_str()),
+                ds::subgraph_name.eq(subgraph_name.clone()),
                 ds::shard.eq(shard.as_str()),
                 ds::version.eq(schema_version as i32),
                 ds::network.eq(network.as_str()),
@@ -1076,6 +1117,7 @@ impl<'a> Connection<'a> {
         Ok(Site {
             id,
             deployment,
+            subgraph_name,
             shard,
             namespace,
             network,
@@ -1090,6 +1132,7 @@ impl<'a> Connection<'a> {
         &self,
         shard: Shard,
         subgraph: &DeploymentHash,
+        subgraph_name: Option<String>,
         network: String,
         schema_version: DeploymentSchemaVersion,
     ) -> Result<Site, StoreError> {
@@ -1097,7 +1140,14 @@ impl<'a> Connection<'a> {
             return Ok(site);
         }
 
-        self.create_site(shard, subgraph.clone(), network, schema_version, true)
+        self.create_site(
+            shard,
+            subgraph.clone(),
+            subgraph_name,
+            network,
+            schema_version,
+            true,
+        )
     }
 
     pub fn assigned_node(&self, site: &Site) -> Result<Option<NodeId>, StoreError> {
@@ -1117,6 +1167,7 @@ impl<'a> Connection<'a> {
         self.create_site(
             shard,
             src.deployment.clone(),
+            src.subgraph_name.clone(),
             src.network.clone(),
             src.schema_version,
             false,
@@ -1780,5 +1831,9 @@ impl Mirror {
         shard: &Shard,
     ) -> Result<Option<Site>, StoreError> {
         self.read(|conn| queries::find_site_in_shard(conn, subgraph, shard))
+    }
+
+    pub fn fill_missing_subgraph_name(&self, subgraph: &DeploymentHash) -> Result<(), StoreError> {
+        self.read(|conn| queries::fill_missing_subgraph_name(conn, subgraph))
     }
 }

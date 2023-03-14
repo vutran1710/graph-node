@@ -397,7 +397,9 @@ impl SubgraphStoreInner {
             .find_site_by_ref(id)?
             .ok_or_else(|| StoreError::DeploymentNotFound(id.to_string()))?;
         let site = Arc::new(site);
-
+        // NOTE: we check if deployment_schemas does not have subgraph_name for this subgraph
+        // if it does, we try to load from the namepsace and update the missing name
+        self.mirror.fill_missing_subgraph_name(&site.deployment)?;
         self.cache_active(&site);
         Ok(site)
     }
@@ -538,7 +540,13 @@ impl SubgraphStoreInner {
                 Some(src_layout) => src_layout.site.schema_version,
             };
             let conn = self.primary_conn()?;
-            let site = conn.allocate_site(shard, &schema.id, network_name, schema_version)?;
+            let site = conn.allocate_site(
+                shard,
+                &schema.id,
+                Some(name.to_string()),
+                network_name,
+                schema_version,
+            )?;
             let node_id = conn.assigned_node(&site)?.unwrap_or(node_id);
             (site, node_id)
         };

@@ -334,7 +334,7 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
         // ownership of the manifest and host builder into the new instance
         let stopwatch_metrics = StopwatchMetrics::new(
             logger.clone(),
-            deployment.hash.clone(),
+            &deployment,
             "process",
             self.metrics_registry.clone(),
         );
@@ -348,19 +348,19 @@ impl<S: SubgraphStore> SubgraphInstanceManager<S> {
 
         let host_metrics = Arc::new(HostMetrics::new(
             registry.cheap_clone(),
-            deployment.hash.as_str(),
+            &deployment.readable_name(),
             stopwatch_metrics.clone(),
         ));
 
         let subgraph_metrics = Arc::new(SubgraphInstanceMetrics::new(
             registry.cheap_clone(),
-            deployment.hash.as_str(),
+            &deployment,
             stopwatch_metrics.clone(),
         ));
 
         let block_stream_metrics = Arc::new(BlockStreamMetrics::new(
             registry.cheap_clone(),
-            &deployment.hash,
+            &deployment,
             manifest.network_name(),
             store.shard().to_string(),
             stopwatch_metrics,

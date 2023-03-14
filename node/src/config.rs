@@ -1433,7 +1433,7 @@ mod tests {
                 details = { type = "firehose", url = "http://localhost:9000" }
                 match = [
                   { name = "some_node_.*", limit = 10 },
-                  { name = "other_node_.*", limit = 0 } ] 
+                  { name = "other_node_.*", limit = 0 } ]
             "#,
         )
         .unwrap();
@@ -1471,7 +1471,7 @@ mod tests {
                 details = { type = "substreams", url = "http://localhost:9000" }
                 match = [
                   { name = "some_node_.*", limit = 101 },
-                  { name = "other_node_.*", limit = 0 } ] 
+                  { name = "other_node_.*", limit = 0 } ]
             "#,
         )
         .unwrap();
@@ -1509,7 +1509,7 @@ mod tests {
                 details = { type = "substreams", url = "http://localhost:9000" }
                 match = [
                   { name = "some_node_.*", limit = 10 },
-                  { name = "other_node_.*", limit = 0 } ] 
+                  { name = "other_node_.*", limit = 0 } ]
             "#,
         )
         .unwrap();
@@ -1547,7 +1547,7 @@ mod tests {
                 details = { type = "substreams", url = "http://localhost:9000" }
                 match = [
                   { name = "some_node_.*", limit = 101 },
-                  { name = "other_node_.*", limit = 0 } ] 
+                  { name = "other_node_.*", limit = 0 } ]
             "#,
         )
         .unwrap();

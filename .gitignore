@@ -29,6 +29,7 @@ lcov.info
 
 /tests/**/bin
 /tests/**/truffle_output
+.cargo/
 
 # ignore config file
 key.json
