@@ -9,6 +9,7 @@ use graph::data::subgraph::API_VERSION_0_0_7;
 use graph::prelude::ethabi::ParamType;
 use graph::prelude::ethabi::Token;
 use graph::prelude::tokio::try_join;
+use graph::prelude::web3::types::U64;
 use graph::{
     blockchain::{block_stream::BlockWithTriggers, BlockPtr, IngestorError},
     prelude::{
@@ -29,9 +30,11 @@ use graph::{
 };
 use graph::{
     components::ethereum::*,
+    prelude::serde_json::Value,
     prelude::web3::api::Web3,
     prelude::web3::transports::Batch,
     prelude::web3::types::{Trace, TraceFilter, TraceFilterBuilder, H160},
+    prelude::web3::Transport as Web3Transport,
 };
 use itertools::Itertools;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
@@ -833,6 +836,33 @@ impl EthereumAdapter {
         )
         .map_err(Error::msg)
     }
+
+    async fn get_latest_final_block(
+        &self,
+    ) -> Result<Option<web3::types::Block<H256>>, web3::Error> {
+        let transport = self.web3.transport();
+        let params = vec![Value::String("finalized".to_string()), Value::Bool(false)];
+        let result = transport.execute("eth_blockNumber", params).await?;
+
+        let block_number_hex = result.as_str().unwrap().strip_prefix("0x").unwrap();
+        let block_number = i64::from_str_radix(block_number_hex, 16).unwrap() as u64;
+        let block_number = web3::types::BlockNumber::Number(U64([block_number]));
+        let result = self.web3.eth().block(BlockId::Number(block_number)).await?;
+
+        return Ok(result);
+    }
+
+    async fn get_latest_available_block(
+        &self,
+    ) -> Result<Option<web3::types::Block<H256>>, web3::Error> {
+        let block = self
+            .web3
+            .eth()
+            .block(Web3BlockNumber::Latest.into())
+            .await?;
+
+        return Ok(block);
+    }
 }
 
 #[async_trait]
@@ -928,21 +958,24 @@ impl EthereumAdapterTrait for EthereumAdapter {
         &self,
         logger: &Logger,
     ) -> Box<dyn Future<Item = web3::types::Block<H256>, Error = IngestorError> + Send> {
-        let web3 = self.web3.clone();
+        let myself = self.clone();
+
         Box::new(
-            retry("eth_getBlockByNumber(latest) no txs RPC call", logger)
+            retry("eth_getBlockByNumber(latest) no txs RPC call", &logger)
                 .no_limit()
                 .timeout_secs(ENV_VARS.json_rpc_timeout.as_secs())
                 .run(move || {
-                    let web3 = web3.cheap_clone();
+                    let myself = myself.clone();
+
                     async move {
-                        let block_opt = web3
-                            .eth()
-                            .block(Web3BlockNumber::Latest.into())
-                            .await
-                            .map_err(|e| {
-                                anyhow!("could not get latest block from Ethereum: {}", e)
-                            })?;
+                        let block_opt = match ENV_VARS.fetch_final_blocks_only {
+                            true => myself.get_latest_final_block().await.map_err(|e| {
+                                anyhow!("could not get latest FINAL block from Ethereum: {}", e)
+                            }),
+                            false => myself.get_latest_available_block().await.map_err(|e| {
+                                anyhow!("could not get latest AVAILABLE block from Ethereum: {}", e)
+                            }),
+                        }?;
 
                         block_opt
                             .ok_or_else(|| anyhow!("no latest block returned from Ethereum").into())
