@@ -968,7 +968,6 @@ impl EthereumAdapterTrait for EthereumAdapter {
         let myself = self.clone();
         let metrics = self.metrics.clone();
         let provider = self.provider.clone();
-        let logger = logger.clone();
 
         Box::new(
             retry("eth_getBlockByNumber(latest) no txs RPC call", &logger)
@@ -978,7 +977,6 @@ impl EthereumAdapterTrait for EthereumAdapter {
                     let myself = myself.clone();
                     let metrics = metrics.clone();
                     let provider = provider.clone();
-                    let inner_logger = logger.clone();
 
                     async move {
                         let start = Instant::now();
@@ -988,15 +986,6 @@ impl EthereumAdapterTrait for EthereumAdapter {
 
                         let elapsed = start.elapsed().as_secs_f64();
                         metrics.observe_request(elapsed, "eth_getLatestBlock", &provider);
-
-                        let block_number = block_opt
-                            .clone()
-                            .map_or("failed".to_owned(), |b| b.number.unwrap().to_string());
-
-                        info!(
-                            inner_logger, "Polling for latest block";
-                            "latest" => block_number
-                        );
 
                         block_opt
                             .ok_or_else(|| anyhow!("no latest block returned from Ethereum").into())
