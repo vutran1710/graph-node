@@ -182,13 +182,17 @@ impl SyncStore {
         &self,
         block_ptr_to: BlockPtr,
         firehose_cursor: &FirehoseCursor,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<(), StoreError> {
         self.retry("revert_block_operations", || {
+            let section = stopwatch.start_section("store_revert_block_operation");
             let event = self.writable.revert_block_operations(
                 self.site.clone(),
                 block_ptr_to.clone(),
                 firehose_cursor,
             )?;
+
+            section.end();
 
             self.try_send_store_event(event)
         })
@@ -489,7 +493,7 @@ impl Request {
             } => {
                 let _section = stopwatch.start_section("block_reverting");
                 store
-                    .revert_block_operations(block_ptr.clone(), firehose_cursor)
+                    .revert_block_operations(block_ptr.clone(), firehose_cursor, &stopwatch)
                     .map(|()| ExecResult::Continue)
             }
             Request::Stop => return Ok(ExecResult::Stop),
@@ -902,9 +906,12 @@ impl Writer {
         &self,
         block_ptr_to: BlockPtr,
         firehose_cursor: FirehoseCursor,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<(), StoreError> {
         match self {
-            Writer::Sync(store) => store.revert_block_operations(block_ptr_to, &firehose_cursor),
+            Writer::Sync(store) => {
+                store.revert_block_operations(block_ptr_to, &firehose_cursor, stopwatch)
+            }
             Writer::Async(queue) => {
                 let req = Request::RevertTo {
                     store: queue.store.cheap_clone(),
@@ -1055,11 +1062,14 @@ impl WritableStoreTrait for WritableStore {
         &self,
         block_ptr_to: BlockPtr,
         firehose_cursor: FirehoseCursor,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<(), StoreError> {
         *self.block_ptr.lock().unwrap() = Some(block_ptr_to.clone());
         *self.block_cursor.lock().unwrap() = firehose_cursor.clone();
 
-        self.writer.revert(block_ptr_to, firehose_cursor).await
+        self.writer
+            .revert(block_ptr_to, firehose_cursor, stopwatch)
+            .await
     }
 
     async fn unfail_deterministic_error(

@@ -222,6 +222,7 @@ pub trait WritableStore: ReadStore {
         &self,
         block_ptr_to: BlockPtr,
         firehose_cursor: FirehoseCursor,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<(), StoreError>;
 
     /// If a deterministic error happened, this function reverts the block operations from the
