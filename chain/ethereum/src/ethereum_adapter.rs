@@ -863,6 +863,13 @@ impl EthereumAdapter {
 
         return Ok(block);
     }
+
+    async fn get_latest_block(&self) -> Result<Option<web3::types::Block<H256>>, web3::Error> {
+        match ENV_VARS.fetch_final_blocks_only {
+            true => self.get_latest_final_block().await,
+            false => self.get_latest_available_block().await,
+        }
+    }
 }
 
 #[async_trait]
@@ -959,6 +966,9 @@ impl EthereumAdapterTrait for EthereumAdapter {
         logger: &Logger,
     ) -> Box<dyn Future<Item = web3::types::Block<H256>, Error = IngestorError> + Send> {
         let myself = self.clone();
+        let metrics = self.metrics.clone();
+        let provider = self.provider.clone();
+        let logger = logger.clone();
 
         Box::new(
             retry("eth_getBlockByNumber(latest) no txs RPC call", &logger)
@@ -966,16 +976,27 @@ impl EthereumAdapterTrait for EthereumAdapter {
                 .timeout_secs(ENV_VARS.json_rpc_timeout.as_secs())
                 .run(move || {
                     let myself = myself.clone();
+                    let metrics = metrics.clone();
+                    let provider = provider.clone();
+                    let inner_logger = logger.clone();
 
                     async move {
-                        let block_opt = match ENV_VARS.fetch_final_blocks_only {
-                            true => myself.get_latest_final_block().await.map_err(|e| {
-                                anyhow!("could not get latest FINAL block from Ethereum: {}", e)
-                            }),
-                            false => myself.get_latest_available_block().await.map_err(|e| {
-                                anyhow!("could not get latest AVAILABLE block from Ethereum: {}", e)
-                            }),
-                        }?;
+                        let start = Instant::now();
+                        let block_opt = myself.get_latest_block().await.map_err(|e| {
+                            anyhow!("could not get latest block from Ethereum: {}", e)
+                        })?;
+
+                        let elapsed = start.elapsed().as_secs_f64();
+                        metrics.observe_request(elapsed, "eth_getLatestBlock", &provider);
+
+                        let block_number = block_opt
+                            .clone()
+                            .map_or("failed".to_owned(), |b| b.number.unwrap().to_string());
+
+                        info!(
+                            inner_logger, "Polling for latest block";
+                            "latest" => block_number
+                        );
 
                         block_opt
                             .ok_or_else(|| anyhow!("no latest block returned from Ethereum").into())
