@@ -185,11 +185,12 @@ impl SyncStore {
         stopwatch: &StopwatchMetrics,
     ) -> Result<(), StoreError> {
         self.retry("revert_block_operations", || {
-            let section = stopwatch.start_section("store_revert_block_operation");
+            let section = stopwatch.start_section("revert_store_block_operations");
             let event = self.writable.revert_block_operations(
                 self.site.clone(),
                 block_ptr_to.clone(),
                 firehose_cursor,
+                Some(stopwatch),
             )?;
 
             section.end();
@@ -490,12 +491,9 @@ impl Request {
                 store,
                 block_ptr,
                 firehose_cursor,
-            } => {
-                let _section = stopwatch.start_section("block_reverting");
-                store
-                    .revert_block_operations(block_ptr.clone(), firehose_cursor, &stopwatch)
-                    .map(|()| ExecResult::Continue)
-            }
+            } => store
+                .revert_block_operations(block_ptr.clone(), firehose_cursor, &stopwatch)
+                .map(|()| ExecResult::Continue),
             Request::Stop => return Ok(ExecResult::Stop),
         }
     }
