@@ -458,7 +458,7 @@ enum ExecResult {
 }
 
 impl Request {
-    fn execute(&self) -> Result<ExecResult, StoreError> {
+    fn execute(&self, stopwatch: StopwatchMetrics) -> Result<ExecResult, StoreError> {
         match self {
             Request::Write {
                 store,
@@ -486,9 +486,12 @@ impl Request {
                 store,
                 block_ptr,
                 firehose_cursor,
-            } => store
-                .revert_block_operations(block_ptr.clone(), firehose_cursor)
-                .map(|()| ExecResult::Continue),
+            } => {
+                let _section = stopwatch.start_section("block_reverting");
+                store
+                    .revert_block_operations(block_ptr.clone(), firehose_cursor)
+                    .map(|()| ExecResult::Continue)
+            }
             Request::Stop => return Ok(ExecResult::Stop),
         }
     }
@@ -573,8 +576,9 @@ impl Queue {
                     queue.queue.peek().await
                 };
                 let res = {
+                    let stopwatch = queue.stopwatch.clone();
                     let _section = queue.stopwatch.start_section("queue_execute");
-                    graph::spawn_blocking_allow_panic(move || req.execute()).await
+                    graph::spawn_blocking_allow_panic(move || req.execute(stopwatch)).await
                 };
 
                 let _section = queue.stopwatch.start_section("queue_pop");
