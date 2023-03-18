@@ -90,3 +90,12 @@ services:
     volumes:
       - ./grafana:/etc/grafana/provisioning
       - ./grafana/custom.ini:/etc/grafana/custom.ini
+
+  es:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - 9200:9200
