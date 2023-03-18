@@ -83,7 +83,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "info",
           "value": "info"
         },
@@ -130,7 +130,11 @@
         "type": "custom"
       },
       {
-        "current": {},
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
