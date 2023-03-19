@@ -453,6 +453,7 @@ enum Request {
         /// The subgraph head will be at this block pointer after the revert
         block_ptr: BlockPtr,
         firehose_cursor: FirehoseCursor,
+        stopwatch: StopwatchMetrics,
     },
     Stop,
 }
@@ -463,7 +464,7 @@ enum ExecResult {
 }
 
 impl Request {
-    fn execute(&self, stopwatch: StopwatchMetrics) -> Result<ExecResult, StoreError> {
+    fn execute(&self) -> Result<ExecResult, StoreError> {
         match self {
             Request::Write {
                 store,
@@ -491,6 +492,7 @@ impl Request {
                 store,
                 block_ptr,
                 firehose_cursor,
+                stopwatch,
             } => store
                 .revert_block_operations(block_ptr.clone(), firehose_cursor, &stopwatch)
                 .map(|()| ExecResult::Continue),
@@ -578,9 +580,8 @@ impl Queue {
                     queue.queue.peek().await
                 };
                 let res = {
-                    let stopwatch = queue.stopwatch.clone();
                     let _section = queue.stopwatch.start_section("queue_execute");
-                    graph::spawn_blocking_allow_panic(move || req.execute(stopwatch)).await
+                    graph::spawn_blocking_allow_panic(move || req.execute()).await
                 };
 
                 let _section = queue.stopwatch.start_section("queue_pop");
@@ -915,6 +916,7 @@ impl Writer {
                     store: queue.store.cheap_clone(),
                     block_ptr: block_ptr_to,
                     firehose_cursor,
+                    stopwatch: stopwatch.clone(),
                 };
                 queue.push(req).await
             }
