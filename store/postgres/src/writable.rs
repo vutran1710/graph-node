@@ -190,7 +190,7 @@ impl SyncStore {
                 self.site.clone(),
                 block_ptr_to.clone(),
                 firehose_cursor,
-                Some(stopwatch),
+                stopwatch,
             )?;
 
             section.end();
@@ -203,10 +203,15 @@ impl SyncStore {
         &self,
         current_ptr: &BlockPtr,
         parent_ptr: &BlockPtr,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<UnfailOutcome, StoreError> {
         self.retry("unfail_deterministic_error", || {
-            self.writable
-                .unfail_deterministic_error(self.site.clone(), current_ptr, parent_ptr)
+            self.writable.unfail_deterministic_error(
+                self.site.clone(),
+                current_ptr,
+                parent_ptr,
+                stopwatch,
+            )
         })
     }
 
@@ -916,7 +921,7 @@ impl Writer {
                     store: queue.store.cheap_clone(),
                     block_ptr: block_ptr_to,
                     firehose_cursor,
-                    stopwatch: stopwatch.clone(),
+                    stopwatch: stopwatch.to_owned(),
                 };
                 queue.push(req).await
             }
@@ -1076,10 +1081,11 @@ impl WritableStoreTrait for WritableStore {
         &self,
         current_ptr: &BlockPtr,
         parent_ptr: &BlockPtr,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<UnfailOutcome, StoreError> {
         let outcome = self
             .store
-            .unfail_deterministic_error(current_ptr, parent_ptr)?;
+            .unfail_deterministic_error(current_ptr, parent_ptr, stopwatch)?;
 
         if let UnfailOutcome::Unfailed = outcome {
             *self.block_ptr.lock().unwrap() = self.store.block_ptr().await?;

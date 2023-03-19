@@ -1173,7 +1173,7 @@ impl DeploymentStore {
         site: Arc<Site>,
         block_ptr_to: BlockPtr,
         firehose_cursor: &FirehoseCursor,
-        stopwatch: Option<&StopwatchMetrics>,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<StoreEvent, StoreError> {
         let event = deployment::with_lock(conn, &site, || {
             conn.transaction(|| -> Result<_, StoreError> {
@@ -1196,36 +1196,30 @@ impl DeploymentStore {
                 // The revert functions want the number of the first block that we need to get rid of
                 let block = block_ptr_to.number + 1;
 
-                let section = stopwatch.map(|sw| sw.start_section("revert_deployment_block_ptr"));
+                let section = stopwatch.start_section("revert_deployment_block_ptr");
                 deployment::revert_block_ptr(
                     conn,
                     &site.deployment,
                     block_ptr_to,
                     firehose_cursor,
                 )?;
-                if section.is_some() {
-                    section.unwrap().end()
-                }
+                section.end();
 
                 // Revert the data
                 let layout = self.layout(conn, site.clone())?;
 
-                let section = stopwatch.map(|sw| sw.start_section("revert_layout_block_data"));
+                let section = stopwatch.start_section("revert_layout_block_data");
                 let (event, count) = layout.revert_block(conn, block)?;
-                if section.is_some() {
-                    section.unwrap().end()
-                }
+                section.end();
 
                 // Revert the meta data changes that correspond to this subgraph.
                 // Only certain meta data changes need to be reverted, most
                 // importantly creation of dynamic data sources. We ensure in the
                 // rest of the code that we only record history for those meta data
                 // changes that might need to be reverted
-                let section = stopwatch.map(|sw| sw.start_section("revert_layout_block_metadata"));
+                let section = stopwatch.start_section("revert_layout_block_metadata");
                 Layout::revert_metadata(conn, &site, block)?;
-                if section.is_some() {
-                    section.unwrap().end()
-                }
+                section.end();
 
                 deployment::update_entity_count(
                     conn,
@@ -1244,6 +1238,7 @@ impl DeploymentStore {
         &self,
         site: Arc<Site>,
         block_ptr_to: BlockPtr,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<StoreEvent, StoreError> {
         let conn = self.get_conn()?;
 
@@ -1261,7 +1256,7 @@ impl DeploymentStore {
 
         // When rewinding, we reset the firehose cursor. That way, on resume, Firehose will start
         // from the block_ptr instead (with sanity check to ensure it's resume at the exact block).
-        self.rewind_with_conn(&conn, site, block_ptr_to, &FirehoseCursor::None, None)
+        self.rewind_with_conn(&conn, site, block_ptr_to, &FirehoseCursor::None, stopwatch)
     }
 
     pub(crate) fn revert_block_operations(
@@ -1269,7 +1264,7 @@ impl DeploymentStore {
         site: Arc<Site>,
         block_ptr_to: BlockPtr,
         firehose_cursor: &FirehoseCursor,
-        stopwatch: Option<&StopwatchMetrics>,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<StoreEvent, StoreError> {
         let conn = self.get_conn()?;
         // Unwrap: If we are reverting then the block ptr is not `None`.
@@ -1498,6 +1493,7 @@ impl DeploymentStore {
         site: Arc<Site>,
         current_ptr: &BlockPtr,
         parent_ptr: &BlockPtr,
+        stopwatch: &StopwatchMetrics,
     ) -> Result<UnfailOutcome, StoreError> {
         let conn = &self.get_conn()?;
         let deployment_id = &site.deployment;
@@ -1544,7 +1540,7 @@ impl DeploymentStore {
                     // We reset the firehose cursor. That way, on resume, Firehose will start from
                     // the block_ptr instead (with sanity checks to ensure it's resuming at the
                     // correct block).
-                    let _ = self.revert_block_operations(site.clone(), parent_ptr.clone(), &FirehoseCursor::None, None)?;
+                    let _ = self.revert_block_operations(site.clone(), parent_ptr.clone(), &FirehoseCursor::None, stopwatch)?;
 
                     // Unfail the deployment.
                     deployment::update_deployment_status(conn, deployment_id, prev_health, None)?;
