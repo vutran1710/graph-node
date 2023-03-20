@@ -17,6 +17,7 @@ use graph_graphql::prelude::{
     execute_query, Query as PreparedQuery, QueryExecutionOptions, StoreResolver,
 };
 use graph_graphql::test_support::GraphQLMetrics;
+use graph_mock::create_stopwatch;
 use graph_mock::MockMetricsRegistry;
 use graph_node::config::{Config, Opt};
 use graph_node::store_builder::StoreBuilder;
@@ -319,12 +320,13 @@ pub async fn transact_entities_and_dynamic_data_sources(
 
 /// Revert to block `ptr` and wait for the store to process the changes
 pub async fn revert_block(store: &Arc<Store>, deployment: &DeploymentLocator, ptr: &BlockPtr) {
+    let stopwatch_metrics = create_stopwatch(deployment, LOGGER.clone());
     store
         .subgraph_store()
         .writable(LOGGER.clone(), deployment.id)
         .await
         .expect("can get writable")
-        .revert_block_operations(ptr.clone(), FirehoseCursor::None)
+        .revert_block_operations(ptr.clone(), FirehoseCursor::None, &stopwatch_metrics)
         .await
         .unwrap();
     flush(deployment).await.unwrap();

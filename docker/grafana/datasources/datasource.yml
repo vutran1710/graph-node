@@ -3,10 +3,23 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    # Access mode - proxy (server in the UI) or direct (browser in the UI).
     access: proxy
     url: http://host.docker.internal:9090
     jsonData:
       httpMethod: GET
       manageAlerts: true
       prometheusType: Prometheus
+
+  - name: Elasticsearch
+    type: elasticsearch
+    typeName: Elasticsearch
+    access: proxy
+    url: http://host.docker.internal:9200
+    database: subgraph-logs
+    basicAuth: false
+    isDefault: false
+    jsonData:
+      logLevelField: "level"
+      logMessageField: "text"
+      esVersion: 7.10.0
+      timeField: timestamp
