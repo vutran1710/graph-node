@@ -13,7 +13,7 @@ pub struct SubgraphInstanceMetrics {
     pub block_processing_duration: Box<Histogram>,
     pub block_ops_transaction_duration: Box<Histogram>,
     pub firehose_connection_errors: Counter,
-
+    pub chain_reorg_handling: Box<Histogram>,
     pub stopwatch: StopwatchMetrics,
     trigger_processing_duration: Box<Histogram>,
 }
@@ -65,12 +65,22 @@ impl SubgraphInstanceMetrics {
             )
             .expect("failed to create firehose_connection_errors counter");
 
+        let chain_reorg_handling = registry
+            .new_deployment_histogram(
+                "chain_reorg_handling_duration",
+                "Measures the time handling chain-reorg of deployment",
+                &deployment,
+                vec![1.0, 5.0, 10.0, 20.0, 50.0],
+            )
+            .expect("failed to create `chain-reorg-handling` histogram");
+
         Self {
             block_trigger_count,
             block_processing_duration,
             trigger_processing_duration,
             block_ops_transaction_duration,
             firehose_connection_errors,
+            chain_reorg_handling,
             stopwatch,
         }
     }
@@ -84,6 +94,7 @@ impl SubgraphInstanceMetrics {
         registry.unregister(self.block_trigger_count.clone());
         registry.unregister(self.trigger_processing_duration.clone());
         registry.unregister(self.block_ops_transaction_duration.clone());
+        registry.unregister(self.chain_reorg_handling.clone());
     }
 }
 

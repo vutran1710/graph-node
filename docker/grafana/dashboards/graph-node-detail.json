@@ -572,6 +572,18 @@
           "legendFormat": "trigger_processing",
           "range": true,
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "rate(chain_reorg_handling_duration_sum{deployment=\"$deployment\"}[5m]) / rate(chain_reorg_handling_duration_count{deployment=\"$deployment\"}[5m])",
+          "hide": false,
+          "legendFormat": "reorg_handling",
+          "range": true,
+          "refId": "D"
         }
       ],
       "title": "Processing Durations",
@@ -733,6 +745,6 @@
   "timezone": "",
   "title": "Graphnode Details",
   "uid": "Gy0zjS-Vk",
-  "version": 2,
+  "version": 1,
   "weekStart": ""
 }

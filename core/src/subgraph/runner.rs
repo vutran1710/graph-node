@@ -941,6 +941,13 @@ where
         }
 
         info!(&self.logger, "Reverting block to get back to main chain"; "subgraph_ptr" => &subgraph_ptr, "revert_to_ptr" => &revert_to_ptr);
+
+        let now = Instant::now();
+        let section = self
+            .metrics
+            .subgraph
+            .stopwatch
+            .start_section("revert-handling-start");
         if let Err(e) = self
             .inputs
             .store
@@ -952,6 +959,7 @@ where
             // Exit inner block stream consumption loop and go up to loop that restarts subgraph
             return Ok(Action::Restart);
         }
+        let elapsed = now.elapsed().as_secs_f64();
 
         self.metrics
             .stream
@@ -963,6 +971,8 @@ where
             .set(subgraph_ptr.number as f64);
 
         self.revert_state(subgraph_ptr.number)?;
+        section.end();
+        self.metrics.subgraph.chain_reorg_handling.observe(elapsed);
 
         Ok(Action::Continue)
     }
