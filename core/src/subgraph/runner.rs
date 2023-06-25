@@ -615,7 +615,7 @@ where
     C: Blockchain,
     T: RuntimeHostBuilder<C>,
 {
-    async fn force_manual_revert(&mut self, cursor: FirehoseCursor) -> Result<(), Error> {
+    async fn force_manual_revert(&mut self, cursor: FirehoseCursor) -> Result<bool, Error> {
         let manual_revert = env::var("MANUAL_REVERT")
             .map(|v| {
                 v.split(',')
@@ -627,13 +627,23 @@ where
             .unwrap_or(Vec::new());
 
         if manual_revert.len() < 3 {
-            return Ok(());
+            return Ok(false);
         }
 
-        warn!(&self.logger, "Request force revert!");
         let subgraph_id = manual_revert[0].to_owned();
+        let current_subgraph = self.ctx.instance.subgraph_id.to_string();
+        if subgraph_id != current_subgraph {
+            return Ok(false);
+        }
+        warn!(
+            &self.logger,
+            "--------- Request force revert for subgraph: {}!", subgraph_id
+        );
         let try_block_number = manual_revert[1].parse::<i32>();
         let try_block_hash = BlockHash::try_from(manual_revert[2].as_str());
+
+        // clear env because this is meant to run only once!
+        env::set_var("MANUAL_REVERT", "");
 
         match (try_block_number, try_block_hash) {
             (Ok(block_number), Ok(block_hash)) => {
@@ -646,17 +656,11 @@ where
                 );
                 self.handle_revert(BlockPtr::new(block_hash, block_number), cursor)
                     .await?;
+                info!(&self.logger, "------ MANUAL REVERT FINISHED -------");
+                Ok(true)
             }
-            _ => (),
+            _ => Ok(false),
         }
-
-        // clear env because this is meant to run only once!
-        env::set_var("MANUAL_REVERT", "");
-        info!(
-            &self.logger,
-            "----------- MANUAL REVERT FINISHED -------------"
-        );
-        Ok(())
     }
 
     async fn handle_stream_event(
