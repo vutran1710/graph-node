@@ -670,8 +670,13 @@ where
     ) -> Result<Action, Error> {
         let action = match event {
             Some(Ok(BlockStreamEvent::ProcessBlock(block, cursor))) => {
-                self.handle_process_block(block, cursor, cancel_handle)
-                    .await?
+                let has_force_revert = self.force_manual_revert(cursor.clone()).await?;
+                if !has_force_revert {
+                    self.handle_process_block(block, cursor, cancel_handle)
+                        .await?
+                } else {
+                    Action::Restart
+                }
             }
             Some(Ok(BlockStreamEvent::Revert(revert_to_ptr, cursor))) => {
                 self.handle_revert(revert_to_ptr, cursor).await?
